@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Emulating enum using String since SQLite doesn't support enums natively
+// Role: "SUPERADMIN" | "ADMIN"
+// SheetStatus: "DRAFT" | "UNDER_REVIEW" | "FINAL_APPROVED" | "SENT"
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  role        String   @default("ADMIN")
+  is_verified Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  sheets_created  Sheet[]      @relation("CreatedSheets")
+  sheets_reviewed Sheet[]      @relation("ReviewedSheets")
+  review_logs     ReviewLog[]
+}
+
+model Student {
+  roll        String   @id
+  username    String
+  name        String
+  program     String?
+  dept        String?
+  hall        String?
+  room        String?
+  blood_group String?
+  gender      String?
+  hometown    String?
+  image_url   String?
+  email       String? // Assuming derived or filled later
+
+  @@map("students")
+}
+
+model Clause {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  category      String
+  severity_hint String
+  created_at    DateTime @default(now())
+
+  @@map("clauses")
+}
+
+model Sheet {
+  id          String      @id @default(uuid())
+  name        String
+  status      String      @default("DRAFT")
+  created_by  String
+  reviewed_by String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  creator     User         @relation("CreatedSheets", fields: [created_by], references: [id])
+  reviewer    User?        @relation("ReviewedSheets", fields: [reviewed_by], references: [id])
+  rows        PenaltyRow[]
+  review_logs ReviewLog[]
+
+  @@map("sheets")
+}
+
+model PenaltyRow {
+  id       String @id @default(uuid())
+  sheet_id String
+  type     String // GBM / Candidate / Office Bearer
+  name     String
+  roll_no  String
+  email    String
+  clause   String
+  nature   String // Penalty Level (Level 0-6)
+  remarks  String // Official EC remark
+  comment  String // Internal EC note
+
+  sheet    Sheet  @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+
+  @@map("penalty_rows")
+}
+
+model ReviewLog {
+  id          String   @id @default(uuid())
+  sheet_id    String
+  reviewer_id String
+  action      String   // e.g. "SUBMITTED", "APPROVED", "REJECTED"
+  comment     String?
+  timestamp   DateTime @default(now())
+
+  sheet       Sheet    @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+  reviewer    User     @relation(fields: [reviewer_id], references: [id])
+
+  @@map("review_logs")
+}
