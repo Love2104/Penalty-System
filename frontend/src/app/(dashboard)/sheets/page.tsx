@@ -66,6 +66,10 @@ export default function SheetsPage() {
         </button>
       </div>
 
+      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 text-center text-sm font-medium text-blue-300">
+        📢 Please share your Google Spreadsheet with: <span className="font-mono text-white select-all">penalty@penalty-494901.iam.gserviceaccount.com</span>
+      </div>
+
       {isCreating && (
         <motion.div 
           initial={{ opacity: 0, height: 0 }}
