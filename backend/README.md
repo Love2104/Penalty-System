@@ -32,8 +32,15 @@ This is the backend service for the Election Commission Penalty Management Syste
    SMTP_PASS="your-16-character-app-password"
    FRONTEND_URL="http://localhost:3000"
    PORT=5000
+   GOOGLE_APPLICATION_CREDENTIALS="./google-credentials.json"
    STUDENT_SEED_PATH="C:/path/to/students.json"
    ```
+
+   For Google Sheets access, keep the service-account JSON file local and out of Git. The backend supports either of these options:
+   - Set `GOOGLE_APPLICATION_CREDENTIALS` to a local JSON file path such as `./google-credentials.json`
+   - Set `GOOGLE_SERVICE_ACCOUNT_JSON` to the full JSON string in the environment
+
+   `google-credentials.json` is intentionally ignored by Git, so you can keep using the real file locally without publishing it.
 
 3. **Database Configuration:**
    Push the Prisma schema to the SQLite database and generate the client:
