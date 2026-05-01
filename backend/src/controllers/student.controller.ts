@@ -2,6 +2,62 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { getPenaltyCountsByRolls, getStudentRoleInsights } from '../services/roleIntelligence';
 
+export const getStudentFilters = async (req: Request, res: Response) => {
+  try {
+    const [hallRows, programRows] = await Promise.all([
+      prisma.student.groupBy({
+        by: ['hall'],
+        where: {
+          hall: {
+            not: null,
+          },
+        },
+        _count: {
+          hall: true,
+        },
+        orderBy: {
+          hall: 'asc',
+        },
+      }),
+      prisma.student.groupBy({
+        by: ['program'],
+        where: {
+          program: {
+            not: null,
+          },
+        },
+        _count: {
+          program: true,
+        },
+        orderBy: {
+          program: 'asc',
+        },
+      }),
+    ]);
+
+    const halls = hallRows
+      .filter((row) => row.hall && row.hall.trim().length > 0)
+      .map((row) => ({
+        value: row.hall as string,
+        label: row.hall as string,
+        count: row._count.hall,
+      }));
+
+    const programs = programRows
+      .filter((row) => row.program && row.program.trim().length > 0)
+      .map((row) => ({
+        value: row.program as string,
+        label: row.program as string,
+        count: row._count.program,
+      }));
+
+    res.json({ halls, programs });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch student filters' });
+  }
+};
+
 export const searchStudents = async (req: Request, res: Response) => {
   try {
     const { 

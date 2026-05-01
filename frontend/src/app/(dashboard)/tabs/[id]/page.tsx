@@ -48,7 +48,7 @@ interface StudentSearchResult {
 }
 
 interface ClauseOption {
-  id: string;
+  id?: string;
   title: string;
   description: string;
   category: string;
@@ -342,6 +342,8 @@ export default function TabDetailsPage() {
   const selectedPenaltyCount = selectedStudentInfo?.risk_indicator.total_penalties ?? selectedStudentContext?.penalty_count ?? 0;
   const selectedHasConflict = selectedStudentInfo?.has_conflict ?? selectedStudentContext?.has_conflict ?? false;
   const normalizedClauseQuery = clauseQuery.trim().toLowerCase();
+  const getClauseKey = (clause: ClauseOption, index: number) =>
+    clause.id || `${clause.title}-${clause.category}-${index}`;
   const filteredClauses = clauses
     .filter((clause) => {
       if (!normalizedClauseQuery) return true;
@@ -497,10 +499,10 @@ export default function TabDetailsPage() {
                     />
                   </div>
                   {studentResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
-                      {studentResults.map((student) => (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                      {studentResults.map((student, index) => (
                         <div
-                          key={student.roll}
+                          key={`${student.roll}-${index}`}
                           onClick={() => selectStudent(student)}
                           className="cursor-pointer px-4 py-3 text-sm text-white hover:bg-zinc-800"
                         >
@@ -633,10 +635,10 @@ export default function TabDetailsPage() {
                     className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
                   />
                   {showClauseResults && filteredClauses.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
-                      {filteredClauses.map((clause) => (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                      {filteredClauses.map((clause, index) => (
                         <button
-                          key={clause.id}
+                          key={getClauseKey(clause, index)}
                           type="button"
                           onClick={() => selectClause(clause)}
                           className="block w-full border-b border-zinc-800 px-4 py-3 text-left last:border-b-0 hover:bg-zinc-800"

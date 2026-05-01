@@ -21,24 +21,35 @@ interface Student {
   penalty_count: number;
 }
 
+interface FilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingFilters, setLoadingFilters] = useState(false);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 1, page: 1, limit: 10 });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [filterOptions, setFilterOptions] = useState<{ halls: FilterOption[]; programs: FilterOption[] }>({
+    halls: [],
+    programs: [],
+  });
 
   // Advanced filters
   const [dept, setDept] = useState('');
   const [hall, setHall] = useState('');
   const [program, setProgram] = useState('');
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (targetPage = page) => {
     setLoading(true);
     try {
       const res = await api.get('/students/search', {
-        params: { q, page, dept, hall, program }
+        params: { q, page: targetPage, dept, hall, program }
       });
       setStudents(res.data.data);
       setMeta(res.data.meta);
@@ -49,17 +60,28 @@ export default function StudentsPage() {
     }
   };
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      setPage(1);
-      fetchStudents();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [q, dept, hall, program]);
+  const fetchFilterOptions = async () => {
+    setLoadingFilters(true);
+    try {
+      const res = await api.get('/students/filters');
+      setFilterOptions(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingFilters(false);
+    }
+  };
 
   useEffect(() => {
-    fetchStudents();
-  }, [page]);
+    fetchFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchStudents();
+    }, 350);
+    return () => clearTimeout(delayDebounceFn);
+  }, [page, q, dept, hall, program]);
 
   return (
     <div className="space-y-6">
@@ -68,46 +90,81 @@ export default function StudentsPage() {
         <p className="text-zinc-400">Search and verify student details securely.</p>
       </div>
 
-      <div className="glass-card p-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
+      <div className="glass-card border-zinc-800 p-5 sm:p-6">
+        <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
             <input
               type="text"
               placeholder="Search by Name, Roll, or Email..."
               value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full bg-black/50 border border-zinc-800 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-2xl border border-zinc-800 bg-black/50 py-3 pl-10 pr-4 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
-          
-          <div className="flex gap-4">
-            <select 
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <select
               value={hall}
-              onChange={(e) => setHall(e.target.value)}
-              className="bg-black/50 border border-zinc-800 rounded-lg py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onChange={(e) => {
+                setHall(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-2xl border border-zinc-800 bg-black/50 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">All Halls</option>
-              <option value="HALL3">Hall 3</option>
-              <option value="HALL5">Hall 5</option>
-              <option value="HALL12">Hall 12</option>
-              <option value="GH">GH</option>
+              {filterOptions.halls.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
             </select>
-            
-            <select 
+
+            <select
               value={program}
-              onChange={(e) => setProgram(e.target.value)}
-              className="bg-black/50 border border-zinc-800 rounded-lg py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onChange={(e) => {
+                setProgram(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-2xl border border-zinc-800 bg-black/50 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">All Programs</option>
-              <option value="BTech">BTech</option>
-              <option value="MTech">MTech</option>
-              <option value="PhD">PhD</option>
+              {filterOptions.programs.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 overflow-hidden bg-black/30">
+        <div className="mb-5 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span className="rounded-full border border-zinc-800 bg-black/40 px-3 py-1.5">
+            {loadingFilters ? 'Loading hall/program filters...' : `${filterOptions.halls.length} halls loaded`}
+          </span>
+          <span className="rounded-full border border-zinc-800 bg-black/40 px-3 py-1.5">
+            {filterOptions.programs.length} programs loaded
+          </span>
+          {(hall || program || dept || q) && (
+            <button
+              onClick={() => {
+                setHall('');
+                setProgram('');
+                setDept('');
+                setQ('');
+                setPage(1);
+              }}
+              className="rounded-full border border-zinc-700 px-3 py-1.5 text-zinc-300 transition-colors hover:bg-zinc-800"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-black/30">
           <table className="w-full text-sm text-left">
             <thead className="bg-zinc-900/50 text-zinc-400 uppercase text-xs">
               <tr>
