@@ -72,7 +72,7 @@ export const buildRoleBadgeLabel = (role: StudentRole) => {
     case 'Seconder':
       return `Seconder of ${role.candidate_name}`;
     case 'Campaigner':
-      return `Campaigner - ${role.post}`;
+      return `Campaigner for ${role.candidate_name}`;
     default:
       return `${role.role_type} - ${role.post}`;
   }

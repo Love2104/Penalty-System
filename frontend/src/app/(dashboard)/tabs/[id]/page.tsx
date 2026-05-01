@@ -22,7 +22,7 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/useAuthStore';
 import RoleBadges from '@/components/RoleBadges';
 import StudentInfoButton from '@/components/StudentInfoButton';
-import { StudentRole } from '@/lib/role-intelligence';
+import { StudentInfoResponse, StudentRole } from '@/lib/role-intelligence';
 
 const initialFormData = {
   type: 'GBM',
@@ -59,6 +59,8 @@ export default function TabDetailsPage() {
   const [studentResults, setStudentResults] = useState<StudentSearchResult[]>([]);
   const [formData, setFormData] = useState(initialFormData);
   const [selectedStudentContext, setSelectedStudentContext] = useState<StudentSearchResult | null>(null);
+  const [selectedStudentInfo, setSelectedStudentInfo] = useState<StudentInfoResponse | null>(null);
+  const [loadingStudentInfo, setLoadingStudentInfo] = useState(false);
   const [showRowForm, setShowRowForm] = useState(false);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -96,6 +98,7 @@ export default function TabDetailsPage() {
     setStudentQuery('');
     setStudentResults([]);
     setSelectedStudentContext(null);
+    setSelectedStudentInfo(null);
     fetchSheet();
     fetchClauses();
   }, [id]);
@@ -123,11 +126,25 @@ export default function TabDetailsPage() {
     setStudentQuery('');
     setStudentResults([]);
     setSelectedStudentContext(null);
+    setSelectedStudentInfo(null);
     setEditingRowId(null);
     setShowRowForm(false);
   };
 
-  const selectStudent = (student: StudentSearchResult) => {
+  const fetchStudentInfo = async (roll: string) => {
+    setLoadingStudentInfo(true);
+    try {
+      const res = await api.get(`/roles/student/${roll}/full-info`);
+      setSelectedStudentInfo(res.data);
+    } catch (error) {
+      console.error(error);
+      setSelectedStudentInfo(null);
+    } finally {
+      setLoadingStudentInfo(false);
+    }
+  };
+
+  const selectStudent = async (student: StudentSearchResult) => {
     setFormData((prev) => ({
       ...prev,
       name: student.name,
@@ -137,17 +154,20 @@ export default function TabDetailsPage() {
     setStudentQuery('');
     setStudentResults([]);
     setSelectedStudentContext(student);
+    setSelectedStudentInfo(null);
+    await fetchStudentInfo(student.roll);
   };
 
   const openCreateRow = () => {
     setBanner(null);
     setFormData(initialFormData);
     setSelectedStudentContext(null);
+    setSelectedStudentInfo(null);
     setEditingRowId(null);
     setShowRowForm(true);
   };
 
-  const openEditRow = (row: any) => {
+  const openEditRow = async (row: any) => {
     setBanner(null);
     setEditingRowId(row.id);
     setFormData({
@@ -171,7 +191,9 @@ export default function TabDetailsPage() {
       has_conflict: row.student_has_conflict || false,
       penalty_count: row.student_penalty_count || 0,
     });
+    setSelectedStudentInfo(null);
     setShowRowForm(true);
+    await fetchStudentInfo(row.roll_no);
   };
 
   const handleRowSubmit = async (e: React.FormEvent) => {
@@ -292,6 +314,10 @@ export default function TabDetailsPage() {
   const canResendPersonal = isSent && canManageWorkflow;
   const canEdit = canManageWorkflow;
   const parentHref = sheet.spreadsheet?.id ? `/sheets/${sheet.spreadsheet.id}` : '/sheets';
+  const selectedRoles = selectedStudentInfo?.roles || selectedStudentContext?.roles || [];
+  const selectedPenaltyHistory = selectedStudentInfo?.penalty_history || [];
+  const selectedPenaltyCount = selectedStudentInfo?.risk_indicator.total_penalties ?? selectedStudentContext?.penalty_count ?? 0;
+  const selectedHasConflict = selectedStudentInfo?.has_conflict ?? selectedStudentContext?.has_conflict ?? false;
 
   return (
     <div className="space-y-6">
@@ -484,19 +510,52 @@ export default function TabDetailsPage() {
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Election Role Intelligence</p>
                       <div className="mt-3">
-                        <RoleBadges roles={selectedStudentContext.roles} />
+                        <RoleBadges roles={selectedRoles} />
                       </div>
                     </div>
                     <div className="text-right text-sm text-zinc-400">
-                      <p>Total penalties: {selectedStudentContext.penalty_count}</p>
-                      {selectedStudentContext.penalty_count >= 2 && <p className="mt-1 text-red-300">Repeat offender flagged</p>}
+                      <p>Total penalties: {selectedPenaltyCount}</p>
+                      {selectedPenaltyCount >= 2 && <p className="mt-1 text-red-300">Repeat offender flagged</p>}
                     </div>
                   </div>
-                  {selectedStudentContext.has_conflict && (
+                  {selectedHasConflict && (
                     <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
                       Conflict detected: this student appears in multiple candidate groups for the same election year.
                     </div>
                   )}
+                  <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Previous Penalties</p>
+                      {loadingStudentInfo && <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />}
+                    </div>
+                    {loadingStudentInfo ? (
+                      <p className="mt-3 text-sm text-zinc-500">Loading previous penalty history...</p>
+                    ) : selectedPenaltyHistory.length === 0 ? (
+                      <p className="mt-3 text-sm text-zinc-500">No previous penalties found for this student.</p>
+                    ) : (
+                      <div className="mt-3 space-y-3">
+                        {selectedPenaltyHistory.slice(0, 3).map((penalty) => (
+                          <div key={penalty.id} className="rounded-lg border border-zinc-800 bg-black/40 px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 font-medium text-zinc-300">
+                                {penalty.nature}
+                              </span>
+                              <span className="text-zinc-500">
+                                {new Date(penalty.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm font-medium text-white">{penalty.clause}</p>
+                            <p className="mt-1 text-sm text-zinc-400">{penalty.remarks}</p>
+                          </div>
+                        ))}
+                        {selectedPenaltyHistory.length > 3 && (
+                          <p className="text-xs text-zinc-500">
+                            Showing latest 3 of {selectedPenaltyHistory.length} previous penalties. Full history is available from the Info panel.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
