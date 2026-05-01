@@ -9,6 +9,8 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+backend/google-credentials.json
+roles.json
 
 # Builds
 backend/dist
@@ -30,15 +32,3 @@ pnpm-debug.log*
 # OS Files
 .DS_Store
 Thumbs.db
-
-# Secrets
-google-credentials.json
-*.json
-!package.json
-!package-lock.json
-!tsconfig.json
-
-# Local Logs
-*.log
-backend-dev.log
-frontend-dev.log

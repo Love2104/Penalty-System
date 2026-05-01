@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Students', href: '/students', icon: Users },
-  { name: 'Penalty Sheets', href: '/sheets', icon: FileText },
+  { name: 'Master Sheets', href: '/sheets', icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -49,6 +49,19 @@ export default function Sidebar() {
               </Link>
             );
           })}
+          {user?.role === 'SUPERADMIN' && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                pathname.startsWith('/admin')
+                  ? 'bg-white text-black font-medium' 
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+              }`}
+            >
+              <Shield className="h-5 w-5" />
+              Admin Access
+            </Link>
+          )}
         </nav>
       </div>
 

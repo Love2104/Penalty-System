@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
-import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -8,16 +7,20 @@ async function main() {
   console.log('Seeding data...');
 
   // Create CEO
+  const superAdminEmail = process.env.SUPERADMIN_EMAIL || 'lovec23@iitk.ac.in';
   await prisma.user.upsert({
-    where: { email: 'lovechourasia04@gmail.com' },
-    update: {},
+    where: { email: superAdminEmail },
+    update: {
+      role: 'SUPERADMIN',
+      is_verified: true,
+    },
     create: {
-      email: 'lovechourasia04@gmail.com',
+      email: superAdminEmail,
       role: 'SUPERADMIN',
       is_verified: true,
     },
   });
-  console.log('CEO user created: lovechourasia04@gmail.com');
+  console.log(`CEO user created/updated: ${superAdminEmail}`);
 
   // Seed default clauses
   const defaultClauses = [
@@ -58,9 +61,9 @@ async function main() {
   console.log('Clauses seeded.');
 
   // Seed students from JSON file
-  const studentsFilePath = 'D:/Downloads/student-search-iitk-main/student-search-iitk-main/data/students.json';
+  const studentsFilePath = process.env.STUDENT_SEED_PATH?.trim();
 
-  if (fs.existsSync(studentsFilePath)) {
+  if (studentsFilePath && fs.existsSync(studentsFilePath)) {
     console.log('Reading students.json...');
     const data = fs.readFileSync(studentsFilePath, 'utf-8');
     const students = JSON.parse(data);
@@ -113,8 +116,10 @@ async function main() {
       }
     }
     console.log('Student seeding complete.');
+  } else if (studentsFilePath) {
+    console.log(`Student seed file not found at ${studentsFilePath}. Skipping student seeding.`);
   } else {
-    console.log('Students file not found. Skipping student seeding.');
+    console.log('STUDENT_SEED_PATH is not set. Skipping student seeding.');
   }
 }
 

@@ -1,17 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Filter, Loader2, User as UserIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Loader2, Search, User as UserIcon, X } from 'lucide-react';
 import api from '@/lib/api';
+import StudentInfoButton from '@/components/StudentInfoButton';
+import RoleBadges from '@/components/RoleBadges';
+import { StudentRole } from '@/lib/role-intelligence';
 
 interface Student {
   roll: string;
   name: string;
-  email: string;
-  program: string;
-  dept: string;
-  hall: string;
+  email: string | null;
+  program: string | null;
+  dept: string | null;
+  hall: string | null;
+  image_url: string | null;
+  roles: StudentRole[];
+  has_conflict: boolean;
+  penalty_count: number;
 }
 
 export default function StudentsPage() {
@@ -19,7 +26,8 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
+  const [meta, setMeta] = useState({ total: 0, totalPages: 1, page: 1, limit: 10 });
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Advanced filters
   const [dept, setDept] = useState('');
@@ -103,25 +111,26 @@ export default function StudentsPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-zinc-900/50 text-zinc-400 uppercase text-xs">
               <tr>
-                <th className="px-6 py-4 font-medium">Roll No</th>
-                <th className="px-6 py-4 font-medium">Name</th>
+                <th className="px-6 py-4 font-medium">Student</th>
+                <th className="px-6 py-4 font-medium">Election Roles</th>
                 <th className="px-6 py-4 font-medium">Email</th>
                 <th className="px-6 py-4 font-medium">Program</th>
                 <th className="px-6 py-4 font-medium">Dept</th>
                 <th className="px-6 py-4 font-medium">Hall</th>
+                <th className="px-6 py-4 font-medium text-right">Info</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                     Searching records...
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
                     No students found matching your criteria.
                   </td>
                 </tr>
@@ -134,17 +143,43 @@ export default function StudentsPage() {
                     key={student.roll} 
                     className="hover:bg-zinc-900/50 transition-colors"
                   >
-                    <td className="px-6 py-4 font-medium text-white">{student.roll}</td>
-                    <td className="px-6 py-4 text-zinc-300 flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-zinc-800 flex items-center justify-center">
-                        <UserIcon className="h-3 w-3" />
+                    <td className="px-6 py-4 text-zinc-300 flex items-center gap-3">
+                      {student.image_url ? (
+                        <img 
+                          src={student.image_url} 
+                          alt={`${student.name}'s profile`} 
+                          className="h-8 w-8 rounded-full object-cover border border-zinc-700 bg-zinc-900 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          onClick={() => setSelectedImage(student.image_url)}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div className={`h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 fallback-icon ${student.image_url ? 'hidden' : ''}`}>
+                        <UserIcon className="h-4 w-4" />
                       </div>
-                      {student.name}
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-white">{student.name}</span>
+                          {student.has_conflict && <AlertTriangle className="h-4 w-4 text-yellow-400" />}
+                        </div>
+                        <p className="text-xs text-zinc-500">{student.roll}</p>
+                        {student.penalty_count >= 2 && (
+                          <p className="mt-1 text-xs text-red-300">Repeat offender | {student.penalty_count} penalties</p>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-zinc-400">{student.email}</td>
-                    <td className="px-6 py-4 text-zinc-400">{student.program}</td>
-                    <td className="px-6 py-4 text-zinc-400 truncate max-w-[150px]">{student.dept}</td>
-                    <td className="px-6 py-4 text-zinc-400">{student.hall}</td>
+                    <td className="px-6 py-4">
+                      <RoleBadges roles={student.roles} maxVisible={2} />
+                    </td>
+                    <td className="px-6 py-4 text-zinc-400">{student.email || '-'}</td>
+                    <td className="px-6 py-4 text-zinc-400">{student.program || '-'}</td>
+                    <td className="px-6 py-4 text-zinc-400 truncate max-w-[150px]">{student.dept || '-'}</td>
+                    <td className="px-6 py-4 text-zinc-400">{student.hall || '-'}</td>
+                    <td className="px-6 py-4 text-right">
+                      <StudentInfoButton roll={student.roll} />
+                    </td>
                   </motion.tr>
                 ))
               )}
@@ -176,6 +211,38 @@ export default function StudentsPage() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-pointer"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-2xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 bg-zinc-900"
+            >
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white transition-colors z-10"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <img 
+                src={selectedImage} 
+                alt="Enlarged profile" 
+                className="w-full h-full object-contain"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

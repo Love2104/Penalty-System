@@ -19,9 +19,10 @@ model User {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  sheets_created  Sheet[]      @relation("CreatedSheets")
-  sheets_reviewed Sheet[]      @relation("ReviewedSheets")
-  review_logs     ReviewLog[]
+  sheets_created        Sheet[]        @relation("CreatedSheets")
+  sheets_reviewed       Sheet[]        @relation("ReviewedSheets")
+  spreadsheets_created  Spreadsheet[]  @relation("CreatedSpreadsheets")
+  review_logs           ReviewLog[]
 }
 
 model Student {
@@ -52,36 +53,58 @@ model Clause {
   @@map("clauses")
 }
 
-model Sheet {
-  id          String      @id @default(uuid())
-  name        String
-  status      String      @default("DRAFT")
-  created_by  String
-  reviewed_by String?
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+model Spreadsheet {
+  id                    String   @id @default(uuid())
+  name                  String
+  google_spreadsheet_id String?  @unique
+  created_by            String
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
+  creator User    @relation("CreatedSpreadsheets", fields: [created_by], references: [id])
+  tabs    Sheet[]
+
+  @@map("spreadsheets")
+}
+
+model Sheet {
+  id              String      @id @default(uuid())
+  spreadsheet_id  String?
+  name            String
+  status          String      @default("DRAFT")
+  created_by      String
+  reviewed_by     String?
+  google_tab_name String?
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+
+  spreadsheet Spreadsheet? @relation(fields: [spreadsheet_id], references: [id], onDelete: Cascade)
   creator     User         @relation("CreatedSheets", fields: [created_by], references: [id])
   reviewer    User?        @relation("ReviewedSheets", fields: [reviewed_by], references: [id])
   rows        PenaltyRow[]
   review_logs ReviewLog[]
 
+  @@unique([spreadsheet_id, google_tab_name])
   @@map("sheets")
 }
 
 model PenaltyRow {
-  id       String @id @default(uuid())
-  sheet_id String
-  type     String // GBM / Candidate / Office Bearer
-  name     String
-  roll_no  String
-  email    String
-  clause   String
-  nature   String // Penalty Level (Level 0-6)
-  remarks  String // Official EC remark
-  comment  String // Internal EC note
+  id         String   @id @default(uuid())
+  sheet_id   String
+  type       String   // GBM / Candidate / Office Bearer
+  name       String
+  roll_no    String
+  email      String
+  clause     String
+  nature     String   // Penalty Level (Level 0-6)
+  remarks    String   // Official EC remark
+  comment    String   // Internal EC note
+  created_at DateTime @default(now())
 
-  sheet    Sheet  @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+  sheet      Sheet     @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+
+  @@index([roll_no])
+  @@index([sheet_id, roll_no])
 
   @@map("penalty_rows")
 }
@@ -98,4 +121,30 @@ model ReviewLog {
   reviewer    User     @relation(fields: [reviewer_id], references: [id])
 
   @@map("review_logs")
+}
+
+model Config {
+  key   String @id
+  value String
+
+  @@map("configs")
+}
+
+model RoleMapping {
+  id             String   @id @default(uuid())
+  student_roll   String
+  student_name   String
+  role_type      String
+  candidate_roll String
+  candidate_name String
+  post           String
+  group_id       Int
+  election_year  Int
+  created_at     DateTime @default(now())
+
+  @@index([student_roll, election_year])
+  @@index([student_roll, role_type])
+  @@index([candidate_roll, election_year])
+  @@index([election_year, group_id])
+  @@map("role_mappings")
 }

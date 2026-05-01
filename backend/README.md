@@ -24,14 +24,15 @@ This is the backend service for the Election Commission Penalty Management Syste
    A `.env` file should be present in the root directory. If not, create one:
    ```env
    DATABASE_URL="file:./dev.db"
-   JWT_SECRET="supersecret_jwt_key_for_testing"
+   JWT_SECRET="replace-with-a-long-random-secret"
    JWT_EXPIRES_IN="7d"
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT=465
-   SMTP_USER="test@gmail.com"
-   SMTP_PASS="test"
+   SMTP_USER="your-email@gmail.com"
+   SMTP_PASS="your-16-character-app-password"
    FRONTEND_URL="http://localhost:3000"
    PORT=5000
+   STUDENT_SEED_PATH="C:/path/to/students.json"
    ```
 
 3. **Database Configuration:**
@@ -42,7 +43,7 @@ This is the backend service for the Election Commission Penalty Management Syste
    ```
 
 4. **Seed Initial Data:**
-   Seed the database with default clauses, the CEO account, and the student dataset:
+   Seed the database with default clauses, the CEO account, and optionally the student dataset if `STUDENT_SEED_PATH` is configured:
    ```bash
    npx prisma db seed
    ```
@@ -62,7 +63,7 @@ The server will start on `http://localhost:5000` with `nodemon` for auto-restart
 All routes (except `/auth/*`) require a valid JWT token passed in the `Authorization: Bearer <token>` header.
 
 ### Authentication
-* `POST /api/auth/login` - Request an OTP for a valid email (e.g., `@iitk.ac.in`). *(Note: In local dev, the OTP is printed to the terminal console, not emailed).*
+* `POST /api/auth/login` - Request an OTP for a valid email (e.g., `@iitk.ac.in`).
 * `POST /api/auth/verify-otp` - Verify the OTP and receive a JWT token.
 
 ### Students

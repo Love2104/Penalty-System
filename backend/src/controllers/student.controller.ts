@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { getPenaltyCountsByRolls, getStudentRoleInsights } from '../services/roleIntelligence';
 
 export const searchStudents = async (req: Request, res: Response) => {
   try {
@@ -53,8 +54,21 @@ export const searchStudents = async (req: Request, res: Response) => {
       prisma.student.count({ where })
     ]);
 
+    const rolls = students.map((student) => student.roll);
+    const [{ roleMap, conflictMap }, penaltyCountMap] = await Promise.all([
+      getStudentRoleInsights(rolls),
+      getPenaltyCountsByRolls(rolls),
+    ]);
+
+    const enrichedStudents = students.map((student) => ({
+      ...student,
+      roles: roleMap.get(student.roll) || [],
+      has_conflict: conflictMap.get(student.roll) || false,
+      penalty_count: penaltyCountMap.get(student.roll) || 0,
+    }));
+
     res.json({
-      data: students,
+      data: enrichedStudents,
       meta: {
         total,
         page: pageNum,
@@ -66,5 +80,32 @@ export const searchStudents = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to search students' });
+  }
+};
+
+export const addStudent = async (req: Request, res: Response) => {
+  try {
+    const { roll, name, email, program, dept, hall } = req.body;
+    
+    if (!roll || !name) return res.status(400).json({ error: 'Roll and Name are required' });
+
+    const student = await prisma.student.upsert({
+      where: { roll },
+      update: { name, email, program, dept, hall },
+      create: {
+        roll,
+        name,
+        email,
+        username: email ? email.split('@')[0] : roll,
+        program,
+        dept,
+        hall
+      }
+    });
+
+    res.json({ message: 'Student added successfully', student });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to add student' });
   }
 };

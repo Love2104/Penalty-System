@@ -1,23 +1,13 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import prisma from '../lib/prisma';
+import { sendMail } from '../services/mailer';
 
 import dotenv from 'dotenv';
 dotenv.config();
 
 // In-memory OTP store for simplicity. In prod, use Redis or DB.
 const otpStore = new Map<string, { otp: string, expiresAt: number }>();
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 export const login = async (req: Request, res: Response) => {
   try {
@@ -44,8 +34,7 @@ export const login = async (req: Request, res: Response) => {
     // For local testing, we'll just log it to console as well to make it easy.
     console.log(`[LOCAL DEV] OTP for ${email} is ${otp}`);
 
-    await transporter.sendMail({
-      from: `"IITK Election Commission" <${process.env.SMTP_USER}>`,
+    await sendMail({
       to: email,
       subject: 'Login OTP - EC Penalty System',
       html: `
@@ -54,7 +43,8 @@ export const login = async (req: Request, res: Response) => {
           <p>Your OTP for login is: <strong style="font-size: 24px;">${otp}</strong></p>
           <p>This OTP will expire in 5 minutes.</p>
         </div>
-      `
+      `,
+      text: `Your OTP for the EC Penalty System is ${otp}. It will expire in 5 minutes.`
     });
 
     res.json({ message: 'OTP sent successfully. Please check your email.' });
@@ -121,5 +111,49 @@ export const verifyOtp = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+};
+
+export const registerAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, role } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!email.endsWith('@iitk.ac.in') && !email.endsWith('@gmail.com')) {
+      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        role: role || 'ADMIN',
+        is_verified: true
+      }
+    });
+
+    res.json({ message: 'Admin registered successfully', user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to register admin' });
+  }
+};
+
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { created_at: 'desc' }
+    });
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 };
