@@ -47,6 +47,13 @@ interface StudentSearchResult {
   penalty_count: number;
 }
 
+interface ClauseOption {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+}
+
 export default function TabDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -54,7 +61,9 @@ export default function TabDetailsPage() {
 
   const [sheet, setSheet] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [clauses, setClauses] = useState<any[]>([]);
+  const [clauses, setClauses] = useState<ClauseOption[]>([]);
+  const [clauseQuery, setClauseQuery] = useState('');
+  const [showClauseResults, setShowClauseResults] = useState(false);
   const [studentQuery, setStudentQuery] = useState('');
   const [studentResults, setStudentResults] = useState<StudentSearchResult[]>([]);
   const [formData, setFormData] = useState(initialFormData);
@@ -99,6 +108,8 @@ export default function TabDetailsPage() {
     setStudentResults([]);
     setSelectedStudentContext(null);
     setSelectedStudentInfo(null);
+    setClauseQuery('');
+    setShowClauseResults(false);
     fetchSheet();
     fetchClauses();
   }, [id]);
@@ -127,6 +138,8 @@ export default function TabDetailsPage() {
     setStudentResults([]);
     setSelectedStudentContext(null);
     setSelectedStudentInfo(null);
+    setClauseQuery('');
+    setShowClauseResults(false);
     setEditingRowId(null);
     setShowRowForm(false);
   };
@@ -163,6 +176,8 @@ export default function TabDetailsPage() {
     setFormData(initialFormData);
     setSelectedStudentContext(null);
     setSelectedStudentInfo(null);
+    setClauseQuery('');
+    setShowClauseResults(false);
     setEditingRowId(null);
     setShowRowForm(true);
   };
@@ -192,8 +207,16 @@ export default function TabDetailsPage() {
       penalty_count: row.student_penalty_count || 0,
     });
     setSelectedStudentInfo(null);
+    setClauseQuery(row.clause);
+    setShowClauseResults(false);
     setShowRowForm(true);
     await fetchStudentInfo(row.roll_no);
+  };
+
+  const selectClause = (clause: ClauseOption) => {
+    setFormData((prev) => ({ ...prev, clause: clause.title }));
+    setClauseQuery(clause.title);
+    setShowClauseResults(false);
   };
 
   const handleRowSubmit = async (e: React.FormEvent) => {
@@ -318,6 +341,15 @@ export default function TabDetailsPage() {
   const selectedPenaltyHistory = selectedStudentInfo?.penalty_history || [];
   const selectedPenaltyCount = selectedStudentInfo?.risk_indicator.total_penalties ?? selectedStudentContext?.penalty_count ?? 0;
   const selectedHasConflict = selectedStudentInfo?.has_conflict ?? selectedStudentContext?.has_conflict ?? false;
+  const normalizedClauseQuery = clauseQuery.trim().toLowerCase();
+  const filteredClauses = clauses
+    .filter((clause) => {
+      if (!normalizedClauseQuery) return true;
+      const haystack = `${clause.title} ${clause.category} ${clause.description}`.toLowerCase();
+      return normalizedClauseQuery.split(/\s+/).every((token) => haystack.includes(token));
+    })
+    .slice(0, 10);
+  const selectedClause = clauses.find((clause) => clause.title === formData.clause) || null;
 
   return (
     <div className="space-y-6">
@@ -584,20 +616,39 @@ export default function TabDetailsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-zinc-400">Clause</label>
-                <select
-                  required
-                  value={formData.clause}
-                  onChange={(e) => setFormData({ ...formData, clause: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
-                >
-                  <option value="">Select Clause...</option>
-                  {clauses.map((clause) => (
-                    <option key={clause.id} value={clause.title}>
-                      {clause.title}
-                    </option>
-                  ))}
-                  <option value="Custom">Custom / Other</option>
-                </select>
+                <div className="relative">
+                  <input
+                    required
+                    value={clauseQuery}
+                    onChange={(e) => {
+                      const nextQuery = e.target.value;
+                      setClauseQuery(nextQuery);
+                      setShowClauseResults(true);
+                      if (formData.clause && nextQuery !== formData.clause) {
+                        setFormData({ ...formData, clause: '' });
+                      }
+                    }}
+                    onFocus={() => setShowClauseResults(true)}
+                    placeholder="Search clause, section, or exact line..."
+                    className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
+                  />
+                  {showClauseResults && filteredClauses.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                      {filteredClauses.map((clause) => (
+                        <button
+                          key={clause.id}
+                          type="button"
+                          onClick={() => selectClause(clause)}
+                          className="block w-full border-b border-zinc-800 px-4 py-3 text-left last:border-b-0 hover:bg-zinc-800"
+                        >
+                          <p className="text-sm font-medium text-white">{clause.title}</p>
+                          <p className="mt-1 text-xs text-zinc-500">{clause.category}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-zinc-400">{clause.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-zinc-400">Nature (Level)</label>
@@ -615,6 +666,21 @@ export default function TabDetailsPage() {
                   <option>Level 6</option>
                 </select>
               </div>
+
+              {selectedClause && (
+                <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4 lg:col-span-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Selected Clause</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
+                      {selectedClause.title}
+                    </span>
+                    <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200">
+                      {selectedClause.category}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-zinc-300">{selectedClause.description}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:col-span-3">
                 <div>

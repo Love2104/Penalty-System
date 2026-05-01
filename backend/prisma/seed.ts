@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -22,43 +23,17 @@ async function main() {
   });
   console.log(`CEO user created/updated: ${superAdminEmail}`);
 
-  // Seed default clauses
-  const defaultClauses = [
-    {
-      title: 'Anti-campaigning prohibited',
-      description: 'Engaging in any campaigning activities during the silent period or unauthorized campaigning.',
-      category: 'Campaigning',
-      severity_hint: 'Level 3 - Level 5',
-    },
-    {
-      title: 'Unauthorized public gathering',
-      description: 'Organizing or participating in gatherings without prior permission from the authorities.',
-      category: 'Public Order',
-      severity_hint: 'Level 2 - Level 4',
-    },
-    {
-      title: 'Social media violations',
-      description: 'Posting inappropriate content, harassment, or violating election guidelines on social platforms.',
-      category: 'Digital Conduct',
-      severity_hint: 'Level 1 - Level 3',
-    },
-    {
-      title: 'Use of institute resources',
-      description: 'Unauthorized use of institute emails, servers, or physical resources for campaigning.',
-      category: 'Resource Misuse',
-      severity_hint: 'Level 3 - Level 5',
-    },
-  ];
-
-  for (const clause of defaultClauses) {
-    const existing = await prisma.clause.findFirst({
-      where: { title: clause.title },
+  const clauseSeedPath = path.join(__dirname, 'data', 'coc-ge-2026-clauses.json');
+  if (fs.existsSync(clauseSeedPath)) {
+    const clauseRows = JSON.parse(fs.readFileSync(clauseSeedPath, 'utf-8'));
+    await prisma.clause.deleteMany();
+    await prisma.clause.createMany({
+      data: clauseRows,
     });
-    if (!existing) {
-      await prisma.clause.create({ data: clause });
-    }
+    console.log(`Seeded ${clauseRows.length} clauses from COC GE 2026.`);
+  } else {
+    console.log('Clause seed file not found. Skipping clause seeding.');
   }
-  console.log('Clauses seeded.');
 
   // Seed students from JSON file
   const studentsFilePath = process.env.STUDENT_SEED_PATH?.trim();

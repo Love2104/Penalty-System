@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -301,6 +303,15 @@ const resendPenaltyEmailForStudent = async (sheet: { name: string }, rows: any[]
     rowCount: rows.length,
     rollNo: primaryRow.roll_no || null,
   };
+};
+
+const loadClauseCatalog = () => {
+  const clauseCatalogPath = path.join(process.cwd(), 'prisma', 'data', 'coc-ge-2026-clauses.json');
+  if (!fs.existsSync(clauseCatalogPath)) {
+    return null;
+  }
+
+  return JSON.parse(fs.readFileSync(clauseCatalogPath, 'utf-8'));
 };
 
 const enrichPenaltyRowsWithStudentInsights = async (rows: any[]) => {
@@ -951,7 +962,10 @@ export const changeSheetStatus = async (req: AuthRequest, res: Response) => {
 
 export const getClauses = async (req: Request, res: Response) => {
   try {
-    const clauses = await prisma.clause.findMany();
+    const catalogClauses = loadClauseCatalog();
+    const clauses = catalogClauses || await prisma.clause.findMany({
+      orderBy: [{ category: 'asc' }, { title: 'asc' }]
+    });
     res.json(clauses);
   } catch (error) {
     console.error(error);

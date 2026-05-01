@@ -25,13 +25,19 @@ export const searchStudents = async (req: Request, res: Response) => {
     // Build Prisma where clause
     const where: any = {};
 
-    // For generic text search 'q'
-    if (q) {
-      where.OR = [
-        { name: { contains: q as string } },
-        { roll: { contains: q as string } },
-        { email: { contains: q as string } }
-      ];
+    const queryTokens = typeof q === 'string'
+      ? q.trim().split(/\s+/).filter(Boolean)
+      : [];
+
+    // For generic text search 'q', match every token so multi-word names work well.
+    if (queryTokens.length > 0) {
+      where.AND = queryTokens.map((token) => ({
+        OR: [
+          { name: { contains: token } },
+          { roll: { contains: token } },
+          { email: { contains: token } }
+        ]
+      }));
     }
 
     // Specific filters
