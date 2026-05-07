@@ -340,7 +340,7 @@ export default function SheetsPage() {
                 Linked on {new Date(spreadsheet.created_at).toLocaleDateString()}
               </p>
 
-              <Link className="button-primary mt-6 w-full justify-between" href={`/sheets/${spreadsheet.id}`}>
+              <Link className="button-primary mt-6 w-full justify-between" href={`/sheets/view?id=${spreadsheet.id}`}>
                 Open workspace
                 <ArrowRight className="h-4 w-4" />
               </Link>

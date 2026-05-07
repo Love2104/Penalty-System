@@ -13,6 +13,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { signOutFromFirebaseClient } from '@/lib/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -36,8 +37,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     ? [...primaryLinks, { href: '/admin', label: 'Admin', icon: Settings2 }]
     : primaryLinks;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logout();
+    await signOutFromFirebaseClient();
     router.push('/');
   };
 

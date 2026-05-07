@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -69,7 +69,8 @@ const statusTone = (status: string) => {
 };
 
 export default function SpreadsheetDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
   const router = useRouter();
   const [spreadsheet, setSpreadsheet] = useState<SpreadsheetDetails | null>(null);
   const [integration, setIntegration] = useState<GoogleIntegrationStatus | null>(null);
@@ -245,7 +246,7 @@ export default function SpreadsheetDetailsPage() {
   if (!spreadsheet) {
     return (
       <div className="panel px-6 py-14 text-center">
-        <p className="text-xl font-semibold">Spreadsheet not found</p>
+        <p className="text-xl font-semibold">{id ? 'Spreadsheet not found' : 'Spreadsheet ID is missing'}</p>
       </div>
     );
   }
@@ -422,7 +423,7 @@ export default function SpreadsheetDetailsPage() {
                 >
                   Delete
                 </button>
-                <Link className="button-primary ml-auto px-4 py-2.5" href={`/tabs/${tab.id}`}>
+                <Link className="button-primary ml-auto px-4 py-2.5" href={`/tabs/view?id=${tab.id}`}>
                   Open
                   <ArrowRight className="h-4 w-4" />
                 </Link>

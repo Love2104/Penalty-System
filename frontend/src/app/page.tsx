@@ -3,17 +3,22 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  ArrowRight,
-  KeyRound,
-  Loader2,
-  Mail,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowLeft, KeyRound, Link2, Loader2, Mail, ShieldCheck, Sparkles } from 'lucide-react';
+import { sendSignInLinkToEmail } from 'firebase/auth';
 import api from '@/lib/api';
+import {
+  ensureFirebaseAuthPersistence,
+  firebaseEmailLinkDomain,
+  getFirebaseEmailLinkUrl,
+  isFirebaseEmailLinkConfigured,
+} from '@/lib/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
+
+const EMAIL_LINK_STORAGE_KEY = 'penalty-system-email-link';
+
+type AuthMethod = 'firebase-link' | 'email-otp';
+type OtpStage = 'email' | 'otp';
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'object' && error && 'response' in error) {
@@ -21,18 +26,27 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return response?.data?.error || fallback;
   }
 
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
   return fallback;
 };
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuth, token, hasHydrated } = useAuthStore();
-  const [step, setStep] = useState<1 | 2>(1);
+  const { token, hasHydrated, setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Auto-select Firebase if configured; otherwise fall back to OTP
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(
+    isFirebaseEmailLinkConfigured ? 'firebase-link' : 'email-otp',
+  );
+  const [otpStage, setOtpStage] = useState<OtpStage>('email');
 
   useEffect(() => {
     if (hasHydrated && token) {
@@ -40,18 +54,58 @@ export default function LoginPage() {
     }
   }, [hasHydrated, router, token]);
 
+  const clearFeedback = () => {
+    setError('');
+    setMessage('');
+  };
+
+  /* ───── Firebase Email Link flow ───── */
+  const requestEmailLink = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    clearFeedback();
+
+    try {
+      if (!isFirebaseEmailLinkConfigured) {
+        throw new Error('Firebase Email Link Auth is not configured in the frontend environment.');
+      }
+
+      // Backend pre-checks that the email is authorized
+      const response = await api.post<{ message: string; email: string }>(
+        '/auth/email-link/request',
+        { email },
+      );
+      const auth = await ensureFirebaseAuthPersistence();
+
+      const actionCodeSettings = {
+        url: getFirebaseEmailLinkUrl(),
+        handleCodeInApp: true,
+        ...(firebaseEmailLinkDomain ? { linkDomain: firebaseEmailLinkDomain } : {}),
+      };
+
+      await sendSignInLinkToEmail(auth, response.data.email, actionCodeSettings);
+      window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, response.data.email);
+      setEmail(response.data.email);
+      setMessage('Check your inbox and open the secure sign-in link on this device to continue.');
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Failed to send sign-in link.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ───── Backend Email OTP flow ───── */
   const requestOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
-    setError('');
-    setMessage('');
+    clearFeedback();
 
     try {
       const response = await api.post<{ message: string }>('/auth/login', { email });
-      setMessage(response.data.message);
-      setStep(2);
+      setMessage(response.data.message || 'OTP sent! Check your email.');
+      setOtpStage('otp');
     } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Failed to send OTP.'));
+      setError(getErrorMessage(requestError, 'Failed to send OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -60,22 +114,56 @@ export default function LoginPage() {
   const verifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
-    setError('');
+    clearFeedback();
 
     try {
       const response = await api.post<{
+        message: string;
         token: string;
         user: { id: string; email: string; role: string };
       }>('/auth/verify-otp', { email, otp });
 
       setAuth(response.data.user, response.data.token);
-      router.push('/dashboard');
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Invalid OTP.'));
+      router.replace('/dashboard');
+    } catch (verifyError) {
+      setError(getErrorMessage(verifyError, 'OTP verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
+
+  const goBackToEmail = () => {
+    setOtpStage('email');
+    setOtp('');
+    clearFeedback();
+  };
+
+  const switchMethod = (method: AuthMethod) => {
+    setAuthMethod(method);
+    setOtpStage('email');
+    setOtp('');
+    clearFeedback();
+  };
+
+  /* ───── Method descriptions ───── */
+  const headingText =
+    authMethod === 'firebase-link'
+      ? 'Sign in via email link'
+      : otpStage === 'email'
+        ? 'Sign in with OTP'
+        : 'Verify your OTP';
+
+  const subText =
+    authMethod === 'firebase-link'
+      ? 'Use your authorized institute email to receive a secure Firebase sign-in link.'
+      : otpStage === 'email'
+        ? 'Enter your authorized institute email to receive a 6-digit OTP.'
+        : `We sent a 6-digit OTP to ${email}. Enter it below to sign in.`;
+
+  const footerText =
+    authMethod === 'firebase-link'
+      ? 'Firebase sends the secure link, then the backend verifies your approved role and issues the app session after the link is opened.'
+      : 'A 6-digit OTP is sent to your email. After verification, the backend issues a secure JWT session token for your approved role.';
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
@@ -97,7 +185,7 @@ export default function LoginPage() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {[
-                ['Secure access', 'OTP-based entry for approved EC accounts only.'],
+                ['Secure access', 'Firebase Email Link or Email OTP for approved EC accounts only.'],
                 ['Review workflow', 'From draft to dispatch with clearer status control.'],
                 ['Deployment-ready', 'Prepared for Firebase frontend and Render backend rollout.'],
               ].map(([title, copy]) => (
@@ -114,22 +202,50 @@ export default function LoginPage() {
         </section>
 
         <section className="panel p-6 sm:p-8">
+          {/* ─── Header ─── */}
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white dark:bg-white dark:text-slate-950">
             <p className="eyebrow text-amber-300 dark:text-amber-700">Member Access</p>
-            <h2 className="mt-3 font-display text-3xl font-bold">Sign in to continue</h2>
-            <p className="mt-2 text-sm text-slate-300 dark:text-slate-600">
-              Use your authorized institute email to receive a one-time login code.
-            </p>
+            <h2 className="mt-3 font-display text-3xl font-bold">{headingText}</h2>
+            <p className="mt-2 text-sm text-slate-300 dark:text-slate-600">{subText}</p>
           </div>
 
+          {/* ─── Method Toggle ─── */}
+          <div className="mt-5 flex gap-2 rounded-2xl border border-[var(--line)] bg-white/55 p-1.5 dark:bg-white/5">
+            <button
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                authMethod === 'firebase-link'
+                  ? 'bg-slate-950 text-white shadow-lg dark:bg-white dark:text-slate-950'
+                  : 'text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)]'
+              }`}
+              onClick={() => switchMethod('firebase-link')}
+              type="button"
+            >
+              <Link2 className="h-4 w-4" />
+              Firebase Link
+            </button>
+            <button
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                authMethod === 'email-otp'
+                  ? 'bg-slate-950 text-white shadow-lg dark:bg-white dark:text-slate-950'
+                  : 'text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)]'
+              }`}
+              onClick={() => switchMethod('email-otp')}
+              type="button"
+            >
+              <KeyRound className="h-4 w-4" />
+              Email OTP
+            </button>
+          </div>
+
+          {/* ─── Feedback ─── */}
           <AnimatePresence mode="wait">
             {(error || message) && (
               <motion.div
                 animate={{ opacity: 1, y: 0 }}
                 className={`mt-5 rounded-3xl border px-4 py-3 text-sm ${
                   error
-                    ? 'border-red-500/20 bg-red-500/10 text-red-300'
-                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                    ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-300'
+                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
                 }`}
                 exit={{ opacity: 0, y: -10 }}
                 initial={{ opacity: 0, y: -10 }}
@@ -139,10 +255,42 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
+          {/* ─── Forms ─── */}
           <AnimatePresence mode="wait">
-            {step === 1 ? (
+            {authMethod === 'firebase-link' ? (
+              /* Firebase Email Link form */
               <motion.form
-                key="otp-request"
+                key="firebase-form"
+                animate={{ opacity: 1, x: 0 }}
+                className="mt-6 space-y-5"
+                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: 20 }}
+                onSubmit={requestEmailLink}
+              >
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Institute email</label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
+                    <input
+                      className="field pl-11"
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="name@iitk.ac.in"
+                      required
+                      type="email"
+                      value={email}
+                    />
+                  </div>
+                </div>
+
+                <button className="button-primary w-full" disabled={loading} type="submit">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Send sign-in link
+                </button>
+              </motion.form>
+            ) : otpStage === 'email' ? (
+              /* OTP - Step 1: Enter email */
+              <motion.form
+                key="otp-email-form"
                 animate={{ opacity: 1, x: 0 }}
                 className="mt-6 space-y-5"
                 exit={{ opacity: 0, x: -20 }}
@@ -170,8 +318,9 @@ export default function LoginPage() {
                 </button>
               </motion.form>
             ) : (
+              /* OTP - Step 2: Enter OTP code */
               <motion.form
-                key="otp-verify"
+                key="otp-verify-form"
                 animate={{ opacity: 1, x: 0 }}
                 className="mt-6 space-y-5"
                 exit={{ opacity: 0, x: 20 }}
@@ -179,14 +328,17 @@ export default function LoginPage() {
                 onSubmit={verifyOtp}
               >
                 <div>
-                  <label className="mb-2 block text-sm font-semibold">Verification code</label>
+                  <label className="mb-2 block text-sm font-semibold">One-time password</label>
                   <div className="relative">
                     <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
                     <input
-                      className="field pl-11 text-center font-mono text-lg tracking-[0.45em]"
+                      autoFocus
+                      className="field pl-11 tracking-[0.3em] text-center text-lg font-bold"
+                      inputMode="numeric"
                       maxLength={6}
-                      onChange={(event) => setOtp(event.target.value)}
-                      placeholder="123456"
+                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
+                      pattern="\d{6}"
+                      placeholder="••••••"
                       required
                       type="text"
                       value={otp}
@@ -194,29 +346,31 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <button className="button-primary w-full" disabled={loading} type="submit">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                  Verify and continue
+                <button
+                  className="button-primary w-full"
+                  disabled={loading || otp.length !== 6}
+                  type="submit"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                  Verify &amp; Sign in
                 </button>
 
                 <button
                   className="button-secondary w-full"
-                  onClick={() => {
-                    setStep(1);
-                    setOtp('');
-                    setError('');
-                    setMessage('');
-                  }}
+                  disabled={loading}
+                  onClick={goBackToEmail}
                   type="button"
                 >
-                  Use another email
+                  <ArrowLeft className="h-4 w-4" />
+                  Change email or resend OTP
                 </button>
               </motion.form>
             )}
           </AnimatePresence>
 
+          {/* ─── Footer info ─── */}
           <div className="mt-6 rounded-3xl border border-[var(--line)] bg-white/55 px-4 py-4 text-sm muted dark:bg-white/5">
-            OTP delivery is still secured from the backend. EmailJS support will be wired for production messaging without exposing the login flow on the client.
+            {footerText}
           </div>
         </section>
       </div>

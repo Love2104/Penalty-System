@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -111,7 +111,8 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export default function TabDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
   const router = useRouter();
   const { user, token } = useAuthStore();
 
@@ -360,7 +361,7 @@ export default function TabDetailsPage() {
     }
 
     try {
-      const destination = sheet?.spreadsheet?.id ? `/sheets/${sheet.spreadsheet.id}` : '/sheets';
+      const destination = sheet?.spreadsheet?.id ? `/sheets/view?id=${sheet.spreadsheet.id}` : '/sheets';
       await api.delete(`/sheets/tabs/${id}`);
       router.push(destination);
     } catch (error) {
@@ -425,7 +426,7 @@ export default function TabDetailsPage() {
   if (!sheet) {
     return (
       <div className="panel px-6 py-14 text-center">
-        <p className="text-xl font-semibold">Tab not found</p>
+        <p className="text-xl font-semibold">{id ? 'Tab not found' : 'Tab ID is missing'}</p>
       </div>
     );
   }
@@ -435,7 +436,7 @@ export default function TabDetailsPage() {
   const isReview = sheet.status === 'UNDER_REVIEW';
   const isApproved = sheet.status === 'FINAL_APPROVED';
   const isSent = sheet.status === 'SENT';
-  const parentHref = sheet.spreadsheet?.id ? `/sheets/${sheet.spreadsheet.id}` : '/sheets';
+  const parentHref = sheet.spreadsheet?.id ? `/sheets/view?id=${sheet.spreadsheet.id}` : '/sheets';
 
   return (
     <div className="space-y-6">

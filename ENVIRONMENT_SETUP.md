@@ -46,13 +46,40 @@ DIRECT_URL="postgresql://<user>:<password>@<project>.<region>.aws.neon.tech/neon
 ## Frontend
 
 1. Copy [`frontend/.env.example`](./frontend/.env.example) to `frontend/.env.local`.
-2. Set the backend base URL:
+2. Set the backend base URL and Firebase web config:
 
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:5000/api"
+NEXT_PUBLIC_FIREBASE_API_KEY="your-firebase-web-api-key"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+NEXT_PUBLIC_FIREBASE_APP_ID="your-firebase-app-id"
 ```
 
-3. Do not place Google credentials, JWT secrets, SMTP passwords, or any other private values in frontend env files. Anything prefixed with `NEXT_PUBLIC_` is exposed to the browser.
+3. In Firebase Authentication:
+   - enable `Email/Password`
+   - enable `Email link (passwordless sign-in)`
+   - add your web domain such as `penaltysystemiitk.web.app` to Authorized Domains
+
+4. Do not place Google credentials, JWT secrets, SMTP passwords, or any other private values in frontend env files. Anything prefixed with `NEXT_PUBLIC_` is exposed to the browser.
+
+## Firebase Admin
+
+The backend verifies Firebase Email Link sign-ins before issuing the app JWT used by protected routes.
+
+Preferred production setup:
+
+```env
+FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n","client_email":"..."}'
+```
+
+Alternative split env vars:
+
+```env
+FIREBASE_PROJECT_ID="your-firebase-project-id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+```
 
 ## Google Credentials
 

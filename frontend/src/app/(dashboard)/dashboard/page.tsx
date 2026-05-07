@@ -220,7 +220,7 @@ export default function DashboardPage() {
                       {tab.spreadsheet?.name || 'Unassigned spreadsheet'} - created by {tab.creator?.email || 'Unknown'}
                     </p>
                   </div>
-                  <Link className="button-secondary" href={`/tabs/${tab.id}`}>
+                  <Link className="button-secondary" href={`/tabs/view?id=${tab.id}`}>
                     Open tab
                     <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                 <Link
                   key={tab.id}
                   className="panel-soft block p-4 transition hover:-translate-y-0.5"
-                  href={`/tabs/${tab.id}`}
+                  href={`/tabs/view?id=${tab.id}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>

@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { Request, Response } from 'express';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { getFirebaseAdminAuth } from '../lib/firebaseAdmin';
 import prisma from '../lib/prisma';
 import { sendMail } from '../services/mailer';
 
@@ -30,6 +32,67 @@ const canRequestOtp = (createdAt: Date) => {
   return Date.now() >= cooldownEnds;
 };
 
+const isAllowedEmail = (email: string) =>
+  email.endsWith('@iitk.ac.in') || email.endsWith('@gmail.com');
+
+const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
+
+const issueJwtForUser = (user: { id: string; email: string; role: string }) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT secret is not configured');
+  }
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    jwtSecret,
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'] },
+  );
+
+  return {
+    message: 'Login successful',
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+  };
+};
+
+const syncVerifiedUser = async (decodedToken: DecodedIdToken) => {
+  const rawEmail = decodedToken.email;
+  if (!rawEmail) {
+    throw new Error('Firebase did not return an email address for this sign-in.');
+  }
+
+  const email = normalizeEmail(rawEmail);
+  const user = await findAuthorizedUser(email);
+  if (!user) {
+    return { status: 403 as const, error: 'Unauthorized email. Please contact the superadmin for access.' };
+  }
+
+  if (!decodedToken.email_verified) {
+    return { status: 403 as const, error: 'Firebase has not verified this email address yet.' };
+  }
+
+  if (!user.is_verified) {
+    await prisma.user.update({
+      where: { email },
+      data: { is_verified: true },
+    });
+  }
+
+  return {
+    status: 200 as const,
+    payload: issueJwtForUser({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    }),
+  };
+};
+
 export const login = async (req: Request, res: Response) => {
   try {
     const rawEmail = req.body?.email as string | undefined;
@@ -40,11 +103,11 @@ export const login = async (req: Request, res: Response) => {
 
     const email = normalizeEmail(rawEmail);
 
-    if (!email.endsWith('@iitk.ac.in') && !email.endsWith('@gmail.com')) {
+    if (!isAllowedEmail(email)) {
       return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findAuthorizedUser(email);
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized email. Please contact the superadmin for access.' });
     }
@@ -124,7 +187,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
     await prisma.otpCode.delete({ where: { email } });
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findAuthorizedUser(email);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -136,29 +199,67 @@ export const verifyOtp = async (req: Request, res: Response) => {
       });
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      return res.status(500).json({ error: 'JWT secret is not configured' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      jwtSecret,
-      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'] },
-    );
-
-    return res.json({
-      message: 'Login successful',
-      token,
-      user: {
+    return res.json(
+      issueJwtForUser({
         id: user.id,
         email: user.email,
         role: user.role,
-      },
-    });
+      }),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+};
+
+export const requestFirebaseEmailLink = async (req: Request, res: Response) => {
+  try {
+    const rawEmail = req.body?.email as string | undefined;
+
+    if (!rawEmail) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const email = normalizeEmail(rawEmail);
+
+    if (!isAllowedEmail(email)) {
+      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+    }
+
+    const user = await findAuthorizedUser(email);
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized email. Please contact the superadmin for access.' });
+    }
+
+    return res.json({
+      message: 'Sign-in link approved. Firebase will send the email next.',
+      email,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to prepare email link sign-in.' });
+  }
+};
+
+export const createFirebaseSession = async (req: Request, res: Response) => {
+  try {
+    const idToken = req.body?.idToken as string | undefined;
+    if (!idToken) {
+      return res.status(400).json({ error: 'Firebase ID token is required.' });
+    }
+
+    const firebaseAuth = getFirebaseAdminAuth();
+    const decodedToken = await firebaseAuth.verifyIdToken(idToken, true);
+    const result = await syncVerifiedUser(decodedToken);
+
+    if (result.status !== 200) {
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    return res.json(result.payload);
+  } catch (error) {
+    console.error(error);
+    return res.status(401).json({ error: 'Failed to verify Firebase sign-in.' });
   }
 };
 
@@ -173,7 +274,7 @@ export const registerAdmin = async (req: Request, res: Response) => {
 
     const email = normalizeEmail(rawEmail);
 
-    if (!email.endsWith('@iitk.ac.in') && !email.endsWith('@gmail.com')) {
+    if (!isAllowedEmail(email)) {
       return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
     }
 

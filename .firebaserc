@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "cpispidpiitk"
+  },
+  "targets": {
+    "cpispidpiitk": {
+      "hosting": {
+        "frontend": [
+          "penaltysystemiitk"
+        ]
+      }
+    }
+  }
+}
