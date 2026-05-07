@@ -1,24 +1,34 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@/store/useAuthStore';
+
+const DEFAULT_API_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL,
+  timeout: 20000,
 });
 
 api.interceptors.request.use((config) => {
-  let token = null;
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token');
-  }
-  if (!token) {
-    // fallback to zustand state if not in localStorage for some reason
-    token = useAuthStore.getState().token;
-  }
-  
+  const token = useAuthStore.getState().token;
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout();
+    }
+
+    return Promise.reject(error);
+  },
+);
+
+export const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
 
 export default api;

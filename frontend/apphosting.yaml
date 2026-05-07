@@ -1,0 +1,13 @@
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 4
+  minInstances: 0
+  concurrency: 80
+
+env:
+  - variable: NEXT_PUBLIC_API_URL
+    value: https://your-render-backend.onrender.com/api
+    availability:
+      - BUILD
+      - RUNTIME

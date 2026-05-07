@@ -1,16 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  AlertTriangle,
   ArrowRight,
   ExternalLink,
-  FileText,
-  Link2,
+  FileSpreadsheet,
+  KeyRound,
   Loader2,
   Plus,
+  ShieldCheck,
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -33,67 +33,96 @@ interface GoogleIntegrationStatus {
   issue: string | null;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    return response?.data?.error || fallback;
+  }
+
+  return fallback;
+};
+
 export default function SheetsPage() {
   const [spreadsheets, setSpreadsheets] = useState<SpreadsheetSummary[]>([]);
   const [integration, setIntegration] = useState<GoogleIntegrationStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [form, setForm] = useState({ name: '', spreadsheetId: '' });
-  const [serviceAccountJson, setServiceAccountJson] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingCredentials, setSavingCredentials] = useState(false);
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const fetchSpreadsheets = async () => {
-    const res = await api.get('/sheets/spreadsheets');
-    setSpreadsheets(res.data);
-  };
-
-  const fetchIntegrationStatus = async () => {
-    const res = await api.get('/sheets/google/integration-status');
-    setIntegration(res.data);
-  };
+  const [form, setForm] = useState({ name: '', spreadsheetId: '' });
+  const [serviceAccountJson, setServiceAccountJson] = useState('');
 
   useEffect(() => {
+    let active = true;
+
     const loadPage = async () => {
       try {
-        await Promise.all([fetchSpreadsheets(), fetchIntegrationStatus()]);
+        const [sheetsResponse, integrationResponse] = await Promise.all([
+          api.get<SpreadsheetSummary[]>('/sheets/spreadsheets'),
+          api.get<GoogleIntegrationStatus>('/sheets/google/integration-status'),
+        ]);
+
+        if (active) {
+          setSpreadsheets(sheetsResponse.data);
+          setIntegration(integrationResponse.data);
+        }
       } catch (error) {
-        console.error(error);
+        if (active) {
+          setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to load sheets workspace.') });
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
-    loadPage();
+    void loadPage();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const refreshIntegration = async () => {
+    const response = await api.get<GoogleIntegrationStatus>('/sheets/google/integration-status');
+    setIntegration(response.data);
+  };
+
+  const refreshSpreadsheets = async () => {
+    const response = await api.get<SpreadsheetSummary[]>('/sheets/spreadsheets');
+    setSpreadsheets(response.data);
+  };
 
   const saveCredentials = async () => {
     if (!serviceAccountJson.trim()) {
-      setBanner({ type: 'error', text: 'Paste the full Google service account JSON first.' });
+      setBanner({ type: 'error', text: 'Paste the Google service-account JSON first.' });
       return;
     }
 
     setSavingCredentials(true);
     setBanner(null);
+
     try {
       await api.patch('/sheets/google/integration-status', {
         serviceAccountJson: serviceAccountJson.trim(),
       });
+
       setServiceAccountJson('');
-      setBanner({ type: 'success', text: 'Google service account saved. You can sync tabs now.' });
-      await fetchIntegrationStatus();
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to save Google credentials.' });
+      setBanner({ type: 'success', text: 'Google credentials saved successfully.' });
+      await refreshIntegration();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to save Google credentials.') });
     } finally {
       setSavingCredentials(false);
     }
   };
 
-  const createSpreadsheet = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createSpreadsheet = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!form.name.trim() || !form.spreadsheetId.trim()) {
-      setBanner({ type: 'error', text: 'Please enter both a display name and a Google Spreadsheet ID or URL.' });
+      setBanner({ type: 'error', text: 'Enter both a display name and a spreadsheet ID or URL.' });
       return;
     }
 
@@ -101,24 +130,20 @@ export default function SheetsPage() {
     setBanner(null);
 
     try {
-      const res = await api.post('/sheets/spreadsheets', {
+      const response = await api.post<{ importedTabsCount: number }>('/sheets/spreadsheets', {
         name: form.name.trim(),
         spreadsheetId: form.spreadsheetId.trim(),
       });
 
-      const importedTabsCount = res.data.importedTabsCount || 0;
       setForm({ name: '', spreadsheetId: '' });
-      setIsCreating(false);
+      setShowCreateForm(false);
       setBanner({
         type: 'success',
-        text: `Spreadsheet linked successfully. Imported ${importedTabsCount} existing tab${importedTabsCount === 1 ? '' : 's'}.`
+        text: `Spreadsheet linked successfully. Imported ${response.data.importedTabsCount} tab${response.data.importedTabsCount === 1 ? '' : 's'}.`,
       });
-      await fetchSpreadsheets();
-    } catch (error: any) {
-      setBanner({
-        type: 'error',
-        text: error.response?.data?.error || 'Failed to link spreadsheet.'
-      });
+      await refreshSpreadsheets();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to link spreadsheet.') });
     } finally {
       setSaving(false);
     }
@@ -126,187 +151,203 @@ export default function SheetsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="mb-2 text-3xl font-bold tracking-tight text-white">Master Sheets</h1>
-          <p className="text-zinc-400">
-            Link multiple Google Spreadsheet files, then manage unlimited penalty tabs inside each one.
-          </p>
-        </div>
-        <button
-          onClick={() => setIsCreating((current) => !current)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 font-semibold text-black transition-colors hover:bg-zinc-200"
-        >
-          <Plus className="h-5 w-5" />
-          Add Spreadsheet
-        </button>
-      </div>
-
-      <div className={`flex items-start gap-3 rounded-2xl border p-4 ${
-        integration?.ready
-          ? 'border-green-500/30 bg-green-500/5'
-          : 'border-blue-500/30 bg-blue-500/5'
-      }`}>
-        <AlertTriangle className={`mt-0.5 h-5 w-5 shrink-0 ${
-          integration?.ready ? 'text-green-400' : 'text-blue-400'
-        }`} />
-        <div>
-          <h3 className={`text-sm font-semibold ${integration?.ready ? 'text-green-400' : 'text-blue-400'}`}>
-            Google Sync Setup
-          </h3>
-          <p className="mt-1 mb-2 text-sm text-zinc-300">
-            {integration?.ready
-              ? <>Google sync is ready. Share each target spreadsheet with this service account and grant <strong>Editor</strong> access:</>
-              : <>To enable sync, paste a Google service-account JSON below or place the credentials file on the backend. Then share each target spreadsheet with this service account and grant <strong>Editor</strong> access:</>}
-          </p>
-          <div className="inline-block select-all rounded-md border border-zinc-700 bg-black/50 px-3 py-1.5 font-mono text-sm text-zinc-200">
-            {integration?.clientEmail || 'Service account email will appear here after credentials are configured'}
+      <section className="panel overflow-hidden p-6 sm:p-8">
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <p className="eyebrow">Sheet operations</p>
+            <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
+              Link master spreadsheets, discover tabs automatically, and keep sync setup visible.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base muted">
+              The workflow is now organized around files first, then tabs inside each file. That keeps Google integration and review operations easier to reason about in production.
+            </p>
           </div>
-          {integration?.source && (
-            <p className="mt-2 text-xs text-zinc-500">Source: {integration.source}</p>
-          )}
-          {integration?.issue && (
-            <p className="mt-2 text-sm text-red-300">{integration.issue}</p>
-          )}
+
+          <div className="panel-soft p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Google sync status</p>
+                <p className="text-sm muted">
+                  {integration?.ready ? 'Ready to create and sync tabs.' : 'Credentials still need to be configured.'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-3xl border border-[var(--line)] bg-white/55 p-4 dark:bg-white/5">
+              <p className="text-sm font-semibold">Service account</p>
+              <p className="mt-2 break-all text-sm muted">
+                {integration?.clientEmail || 'Service account email will appear here after configuration.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-lg font-semibold">Google setup</p>
+            <p className="mt-1 text-sm muted">
+              Share each target spreadsheet with the service account as an editor before syncing tabs.
+            </p>
+          </div>
+          <button
+            className="button-primary"
+            onClick={() => setShowCreateForm((current) => !current)}
+            type="button"
+          >
+            <Plus className="h-4 w-4" />
+            Link spreadsheet
+          </button>
+        </div>
+
+        <div className={`mt-5 rounded-[28px] border p-5 ${
+          integration?.ready ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-amber-500/20 bg-amber-500/10'
+        }`}>
+          <p className="text-sm font-semibold">
+            {integration?.ready ? 'Credentials detected' : 'Credentials required'}
+          </p>
+          <p className="mt-2 text-sm muted">
+            {integration?.issue || (integration?.ready
+              ? `Configured from ${integration.source || 'saved service account'}.`
+              : 'Paste a service-account JSON below or provide the backend file path in production.')}
+          </p>
           {integration?.credentialPath && !integration.ready && (
-            <p className="mt-1 text-xs text-zinc-500">Expected file path: {integration.credentialPath}</p>
+            <p className="mt-2 text-xs text-mono-soft">Expected local file path: {integration.credentialPath}</p>
           )}
         </div>
-      </div>
 
-      {!integration?.ready && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="mb-1 text-lg font-bold text-white">Quick Fix: Paste Service Account JSON</h2>
-          <p className="mb-4 text-sm text-zinc-500">
-            Open your Google Cloud service-account credentials JSON and paste the full contents here. This saves it in the portal so you do not need to create a local file manually.
-          </p>
-          <textarea
-            value={serviceAccountJson}
-            onChange={(e) => setServiceAccountJson(e.target.value)}
-            placeholder='{"type":"service_account","project_id":"...","client_email":"..."}'
-            rows={8}
-            className="w-full rounded-lg border border-zinc-800 bg-black/50 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={saveCredentials}
-              disabled={savingCredentials}
-              className="flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 font-semibold text-black hover:bg-zinc-200 disabled:opacity-50"
-            >
-              {savingCredentials ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Save Google Credentials
-            </button>
-          </div>
-        </div>
-      )}
-
-      {banner && (
-        <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            banner.type === 'success'
-              ? 'border-green-500/20 bg-green-500/10 text-green-300'
-              : 'border-red-500/20 bg-red-500/10 text-red-300'
-          }`}
-        >
-          {banner.text}
-        </div>
-      )}
-
-      {isCreating && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
-        >
-          <h2 className="mb-1 text-xl font-bold text-white">Link a New Spreadsheet</h2>
-          <p className="mb-4 text-sm text-zinc-500">
-            Paste a Google Spreadsheet ID or full URL. We will detect existing tabs automatically.
-          </p>
-
-          <form onSubmit={createSpreadsheet} className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr_auto]">
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))}
-              placeholder="E.g. Academics 2024"
-              className="rounded-lg border border-zinc-800 bg-black/50 px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        {!integration?.ready && (
+          <div className="mt-5 rounded-[28px] border border-[var(--line)] bg-white/55 p-5 dark:bg-white/5">
+            <div className="flex items-center gap-3">
+              <KeyRound className="h-5 w-5 text-[color:var(--accent)]" />
+              <div>
+                <p className="text-sm font-semibold">Quick setup</p>
+                <p className="text-sm muted">Paste the full Google service-account JSON to unlock sheet syncing.</p>
+              </div>
+            </div>
+            <textarea
+              className="field mt-4 min-h-44 resize-y py-3 font-mono text-xs"
+              onChange={(event) => setServiceAccountJson(event.target.value)}
+              placeholder='{"type":"service_account","project_id":"...","client_email":"..."}'
+              value={serviceAccountJson}
             />
-            <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <div className="mt-4 flex justify-end">
+              <button className="button-secondary" disabled={savingCredentials} onClick={saveCredentials} type="button">
+                {savingCredentials ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                Save credentials
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showCreateForm && (
+          <motion.form
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mt-5 rounded-[28px] border border-[var(--line)] bg-white/55 p-5 dark:bg-white/5"
+            initial={{ opacity: 0, height: 0 }}
+            onSubmit={createSpreadsheet}
+          >
+            <p className="text-lg font-semibold">Link a new spreadsheet</p>
+            <p className="mt-1 text-sm muted">
+              Paste either the spreadsheet ID or the full Google Sheets URL.
+            </p>
+            <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.3fr_auto]">
               <input
+                className="field"
+                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Display name"
+                type="text"
+                value={form.name}
+              />
+              <input
+                className="field"
+                onChange={(event) => setForm((current) => ({ ...current, spreadsheetId: event.target.value }))}
+                placeholder="Spreadsheet ID or URL"
                 type="text"
                 value={form.spreadsheetId}
-                onChange={(e) => setForm((current) => ({ ...current, spreadsheetId: e.target.value }))}
-                placeholder="Spreadsheet ID or full Google Sheets URL"
-                className="w-full rounded-lg border border-zinc-800 bg-black/50 py-2.5 pl-10 pr-4 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
+              <button className="button-primary" disabled={saving} type="submit">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Link
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 font-semibold text-black hover:bg-zinc-200 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Link File
-            </button>
-          </form>
-        </motion.div>
-      )}
+          </motion.form>
+        )}
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+        {banner && (
+          <div
+            className={`mt-5 rounded-3xl border px-4 py-3 text-sm ${
+              banner.type === 'success'
+                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                : 'border-red-500/20 bg-red-500/10 text-red-300'
+            }`}
+          >
+            {banner.text}
           </div>
-        ) : spreadsheets.length === 0 ? (
-          <div className="col-span-full rounded-2xl border border-zinc-800 bg-zinc-900 py-12 text-center text-zinc-500">
-            No spreadsheets linked yet. Add your first file to start creating tab-based penalty rooms.
+        )}
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        {loading ? (
+          <div className="panel col-span-full px-6 py-14 text-center">
+            <Loader2 className="mx-auto h-7 w-7 animate-spin text-[color:var(--accent)]" />
+            <p className="mt-3 text-sm muted">Loading linked spreadsheets...</p>
+          </div>
+        ) : !spreadsheets.length ? (
+          <div className="panel col-span-full px-6 py-14 text-center">
+            <FileSpreadsheet className="mx-auto h-10 w-10 text-[color:var(--accent)]" />
+            <h3 className="mt-4 text-2xl font-semibold">No spreadsheets linked yet</h3>
+            <p className="mt-2 text-sm muted">Link your first Google Sheet to begin managing penalty tabs.</p>
           </div>
         ) : (
-          spreadsheets.map((spreadsheet, index) => (
-            <motion.div
-              key={spreadsheet.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 transition-colors hover:border-zinc-700"
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="rounded-xl border border-zinc-800 bg-black p-3">
-                  <FileText className="h-6 w-6 text-zinc-400" />
+          spreadsheets.map((spreadsheet) => (
+            <article key={spreadsheet.id} className="panel flex h-full flex-col p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                  <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 {spreadsheet.google_spreadsheet_url && (
                   <a
+                    className="button-secondary px-3 py-2 text-xs"
                     href={spreadsheet.google_spreadsheet_url}
-                    target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 text-xs text-zinc-500 transition-colors hover:text-white"
+                    target="_blank"
                   >
-                    Open Google
+                    Google
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
               </div>
 
-              <h3 className="mb-2 line-clamp-1 text-lg font-bold text-white">{spreadsheet.name}</h3>
-              <div className="mb-6 space-y-1 text-sm text-zinc-500">
-                <p>Tabs: {spreadsheet.tabCount}</p>
-                <p>Penalty records: {spreadsheet.recordCount}</p>
-                <p>Created by: {spreadsheet.creator?.email}</p>
-                <p>Linked: {new Date(spreadsheet.created_at).toLocaleDateString()}</p>
+              <h3 className="mt-5 text-xl font-semibold">{spreadsheet.name}</h3>
+              <p className="mt-2 text-sm muted">Created by {spreadsheet.creator?.email || 'Unknown user'}</p>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="panel-soft p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground-soft)]">Tabs</p>
+                  <p className="mt-2 text-2xl font-bold">{spreadsheet.tabCount}</p>
+                </div>
+                <div className="panel-soft p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground-soft)]">Records</p>
+                  <p className="mt-2 text-2xl font-bold">{spreadsheet.recordCount}</p>
+                </div>
               </div>
 
-              <Link
-                href={`/sheets/${spreadsheet.id}`}
-                className="mt-auto flex items-center text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-              >
-                Open File
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <p className="mt-4 text-xs text-mono-soft">
+                Linked on {new Date(spreadsheet.created_at).toLocaleDateString()}
+              </p>
+
+              <Link className="button-primary mt-6 w-full justify-between" href={`/sheets/${spreadsheet.id}`}>
+                Open workspace
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            </motion.div>
+            </article>
           ))
         )}
-      </div>
+      </section>
     </div>
   );
 }

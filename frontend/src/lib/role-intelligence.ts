@@ -51,15 +51,15 @@ export interface StudentInfoResponse {
 export const getRoleBadgeClasses = (roleType: string) => {
   switch (roleType) {
     case 'Candidate':
-      return 'border-red-500/30 bg-red-500/10 text-red-300';
+      return 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-300';
     case 'Proposer':
-      return 'border-blue-500/30 bg-blue-500/10 text-blue-300';
+      return 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300';
     case 'Seconder':
-      return 'border-orange-500/30 bg-orange-500/10 text-orange-300';
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300';
     case 'Campaigner':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
     default:
-      return 'border-zinc-700 bg-zinc-800 text-zinc-300';
+      return 'border-[var(--line)] bg-white/70 text-[color:var(--foreground-muted)] dark:bg-white/5';
   }
 };
 
@@ -81,10 +81,10 @@ export const buildRoleBadgeLabel = (role: StudentRole) => {
 export const formatRiskTone = (riskLevel: string) => {
   switch (riskLevel) {
     case 'HIGH':
-      return 'border-red-500/30 bg-red-500/10 text-red-300';
+      return 'border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300';
     case 'MEDIUM':
-      return 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300';
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300';
     default:
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
   }
 };

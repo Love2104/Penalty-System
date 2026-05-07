@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowLeft,
-  CheckCircle,
+  CheckCircle2,
   Download,
   Loader2,
   Pencil,
@@ -18,7 +17,7 @@ import {
   Send,
   Trash2,
 } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiBaseUrl } from '@/lib/api';
 import { useAuthStore } from '@/store/useAuthStore';
 import RoleBadges from '@/components/RoleBadges';
 import StudentInfoButton from '@/components/StudentInfoButton';
@@ -34,6 +33,8 @@ const initialFormData = {
   remarks: '',
   comment: '',
 };
+
+type RowFormState = typeof initialFormData;
 
 interface StudentSearchResult {
   roll: string;
@@ -54,83 +55,148 @@ interface ClauseOption {
   category: string;
 }
 
-export default function TabDetailsPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const { user } = useAuthStore();
+interface PenaltyRow {
+  id: string;
+  type: string;
+  name: string;
+  roll_no: string;
+  email: string;
+  clause: string;
+  nature: string;
+  remarks: string;
+  comment: string;
+  student_roles?: StudentRole[];
+  student_has_conflict?: boolean;
+  student_penalty_count?: number;
+}
 
-  const [sheet, setSheet] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+interface SheetDetails {
+  id: string;
+  name: string;
+  status: string;
+  created_by: string;
+  creator?: { email: string };
+  spreadsheet?: { id: string; name: string; google_spreadsheet_url?: string | null };
+  rows: PenaltyRow[];
+}
+
+interface StudentSearchResponse {
+  data: StudentSearchResult[];
+}
+
+const statusTone = (status: string) => {
+  switch (status) {
+    case 'UNDER_REVIEW':
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    case 'FINAL_APPROVED':
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'SENT':
+      return 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300';
+    default:
+      return 'border-[var(--line)] bg-white/55 text-[color:var(--foreground-muted)] dark:bg-white/5';
+  }
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    return response?.data?.error || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+};
+
+export default function TabDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user, token } = useAuthStore();
+
+  const [sheet, setSheet] = useState<SheetDetails | null>(null);
   const [clauses, setClauses] = useState<ClauseOption[]>([]);
-  const [clauseQuery, setClauseQuery] = useState('');
-  const [showClauseResults, setShowClauseResults] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showRowForm, setShowRowForm] = useState(false);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<RowFormState>(initialFormData);
   const [studentQuery, setStudentQuery] = useState('');
   const [studentResults, setStudentResults] = useState<StudentSearchResult[]>([]);
-  const [formData, setFormData] = useState(initialFormData);
   const [selectedStudentContext, setSelectedStudentContext] = useState<StudentSearchResult | null>(null);
   const [selectedStudentInfo, setSelectedStudentInfo] = useState<StudentInfoResponse | null>(null);
   const [loadingStudentInfo, setLoadingStudentInfo] = useState(false);
-  const [showRowForm, setShowRowForm] = useState(false);
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [clauseQuery, setClauseQuery] = useState('');
+  const [showClauseResults, setShowClauseResults] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [resendingRowId, setResendingRowId] = useState<string | null>(null);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
-  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const fetchSheet = async () => {
-    try {
-      const res = await api.get(`/sheets/tabs/${id}`);
-      setSheet(res.data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchClauses = async () => {
-    try {
-      const res = await api.get('/sheets/clauses');
-      setClauses(res.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const [resendingRowId, setResendingRowId] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setSheet(null);
-    setBanner(null);
-    setFormData(initialFormData);
-    setShowRowForm(false);
-    setEditingRowId(null);
-    setStudentQuery('');
-    setStudentResults([]);
-    setSelectedStudentContext(null);
-    setSelectedStudentInfo(null);
-    setClauseQuery('');
-    setShowClauseResults(false);
-    fetchSheet();
-    fetchClauses();
+    let active = true;
+
+    const loadPage = async () => {
+      try {
+        const [sheetResponse, clausesResponse] = await Promise.all([
+          api.get<SheetDetails>(`/sheets/tabs/${id}`),
+          api.get<ClauseOption[]>('/sheets/clauses'),
+        ]);
+
+        if (active) {
+          setSheet(sheetResponse.data);
+          setClauses(clausesResponse.data);
+        }
+      } catch (error) {
+        if (active) {
+          setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to load this tab.') });
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadPage();
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (studentQuery.length > 2 && showRowForm) {
-        try {
-          const res = await api.get('/students/search', {
-            params: { q: studentQuery, limit: 5 },
-          });
-          setStudentResults(res.data.data);
-        } catch (error) {
-          console.error(error);
+    if (!showRowForm || studentQuery.trim().length < 3) {
+      return;
+    }
+
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await api.get<StudentSearchResponse>('/students/search', {
+          params: { q: studentQuery, limit: 5 },
+        });
+
+        if (active) {
+          setStudentResults(response.data.data);
         }
-      } else {
-        setStudentResults([]);
+      } catch {
+        if (active) {
+          setStudentResults([]);
+        }
       }
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [studentQuery, showRowForm]);
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [showRowForm, studentQuery]);
+
+  const refreshSheet = async () => {
+    const response = await api.get<SheetDetails>(`/sheets/tabs/${id}`);
+    setSheet(response.data);
+  };
 
   const resetRowForm = () => {
     setFormData(initialFormData);
@@ -146,11 +212,11 @@ export default function TabDetailsPage() {
 
   const fetchStudentInfo = async (roll: string) => {
     setLoadingStudentInfo(true);
+
     try {
-      const res = await api.get(`/roles/student/${roll}/full-info`);
-      setSelectedStudentInfo(res.data);
-    } catch (error) {
-      console.error(error);
+      const response = await api.get<StudentInfoResponse>(`/roles/student/${roll}/full-info`);
+      setSelectedStudentInfo(response.data);
+    } catch {
       setSelectedStudentInfo(null);
     } finally {
       setLoadingStudentInfo(false);
@@ -158,22 +224,24 @@ export default function TabDetailsPage() {
   };
 
   const selectStudent = async (student: StudentSearchResult) => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((current) => ({
+      ...current,
       name: student.name,
       roll_no: student.roll,
       email: student.email || '',
     }));
-    setStudentQuery('');
-    setStudentResults([]);
     setSelectedStudentContext(student);
     setSelectedStudentInfo(null);
+    setStudentQuery('');
+    setStudentResults([]);
     await fetchStudentInfo(student.roll);
   };
 
   const openCreateRow = () => {
     setBanner(null);
     setFormData(initialFormData);
+    setStudentQuery('');
+    setStudentResults([]);
     setSelectedStudentContext(null);
     setSelectedStudentInfo(null);
     setClauseQuery('');
@@ -182,7 +250,7 @@ export default function TabDetailsPage() {
     setShowRowForm(true);
   };
 
-  const openEditRow = async (row: any) => {
+  const openEditRow = async (row: PenaltyRow) => {
     setBanner(null);
     setEditingRowId(row.id);
     setFormData({
@@ -213,48 +281,60 @@ export default function TabDetailsPage() {
     await fetchStudentInfo(row.roll_no);
   };
 
-  const selectClause = (clause: ClauseOption) => {
-    setFormData((prev) => ({ ...prev, clause: clause.title }));
-    setClauseQuery(clause.title);
-    setShowClauseResults(false);
-  };
+  const handleRowSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBanner(null);
 
-  const handleRowSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     try {
       if (editingRowId) {
         await api.put(`/sheets/tabs/${id}/rows/${editingRowId}`, formData);
-        setBanner({ type: 'success', text: 'Record updated. Sync this tab to Google, then resend mail only to affected students if needed.' });
+        setBanner({ type: 'success', text: 'Penalty record updated successfully.' });
       } else {
         await api.post(`/sheets/tabs/${id}/rows`, formData);
-        setBanner({ type: 'success', text: 'Penalty record added. Sync this tab to Google, then resend mail only to affected students if needed.' });
+        setBanner({ type: 'success', text: 'Penalty record added successfully.' });
       }
+
       resetRowForm();
-      await fetchSheet();
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to save row' });
+      await refreshSheet();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to save this record.') });
     }
   };
 
   const deleteRow = async (rowId: string) => {
-    if (!confirm('Are you sure you want to delete this penalty record?')) return;
+    if (!window.confirm('Delete this penalty record?')) {
+      return;
+    }
+
     try {
       await api.delete(`/sheets/tabs/${id}/rows/${rowId}`);
-      setBanner({ type: 'success', text: 'Record deleted.' });
-      await fetchSheet();
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to delete row' });
+      setBanner({ type: 'success', text: 'Penalty record deleted.' });
+      await refreshSheet();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to delete this record.') });
     }
   };
 
-  const handleSyncToGoogle = async () => {
+  const changeStatus = async (status: string) => {
+    try {
+      const response = await api.post<{ message: string }>(`/sheets/tabs/${id}/status`, { status });
+      setBanner({ type: 'success', text: response.data.message || `Tab status updated to ${status}.` });
+      await refreshSheet();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to update the tab status.') });
+    }
+  };
+
+  const handleSync = async () => {
     setSyncing(true);
     setBanner(null);
+
     try {
-      const res = await api.post(`/sheets/tabs/${id}/sync-google`);
-      setBanner({ type: 'success', text: res.data.message || 'Synced to Google Sheets!' });
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Sync failed.' });
+      const response = await api.post<{ message: string }>(`/sheets/tabs/${id}/sync-google`);
+      setBanner({ type: 'success', text: response.data.message || 'Tab synced successfully.' });
+      await refreshSheet();
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to sync to Google Sheets.') });
     } finally {
       setSyncing(false);
     }
@@ -263,70 +343,91 @@ export default function TabDetailsPage() {
   const resendRowEmail = async (rowId: string) => {
     setResendingRowId(rowId);
     setBanner(null);
+
     try {
-      const res = await api.post(`/sheets/tabs/${id}/rows/${rowId}/resend-email`);
-      setBanner({ type: 'success', text: res.data.message || 'Penalty email resent successfully.' });
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to resend penalty email.' });
+      const response = await api.post<{ message: string }>(`/sheets/tabs/${id}/rows/${rowId}/resend-email`);
+      setBanner({ type: 'success', text: response.data.message || 'Penalty email resent successfully.' });
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to resend the penalty email.') });
     } finally {
       setResendingRowId(null);
     }
   };
 
-  const handleDeleteSheet = async () => {
-    if (!confirm('Are you sure you want to permanently delete this tab and all its records?')) return;
+  const deleteSheet = async () => {
+    if (!window.confirm('Delete this tab and all of its penalty rows?')) {
+      return;
+    }
+
     try {
       const destination = sheet?.spreadsheet?.id ? `/sheets/${sheet.spreadsheet.id}` : '/sheets';
       await api.delete(`/sheets/tabs/${id}`);
       router.push(destination);
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to delete tab' });
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to delete this tab.') });
     }
   };
 
-  const changeStatus = async (newStatus: string) => {
-    try {
-      const res = await api.post(`/sheets/tabs/${id}/status`, { status: newStatus });
-      setBanner({ type: 'success', text: res.data.message || `Tab status updated to ${newStatus}.` });
-      fetchSheet();
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.response?.data?.error || 'Failed to change status' });
-    }
-  };
-
-  const handleDownloadCsv = async () => {
+  const downloadCsv = async () => {
     setDownloadingCsv(true);
+
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/sheets/tabs/${id}/download`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-      );
-      if (!response.ok) throw new Error('Download failed');
+      const response = await fetch(`${getApiBaseUrl()}/sheets/tabs/${id}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed.');
+      }
+
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = `${sheet?.name || 'tab'}_penalties.csv`;
-      link.click();
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = `${sheet?.name || 'tab'}_penalties.csv`;
+      anchor.click();
       URL.revokeObjectURL(objectUrl);
-    } catch (error: any) {
-      setBanner({ type: 'error', text: error.message || 'Failed to download CSV' });
+    } catch (error) {
+      setBanner({ type: 'error', text: getErrorMessage(error, 'Unable to download CSV.') });
     } finally {
       setDownloadingCsv(false);
     }
   };
 
+  const selectedRoles = selectedStudentInfo?.roles || selectedStudentContext?.roles || [];
+  const selectedPenaltyHistory = selectedStudentInfo?.penalty_history || [];
+  const selectedPenaltyCount =
+    selectedStudentInfo?.risk_indicator.total_penalties ?? selectedStudentContext?.penalty_count ?? 0;
+  const selectedHasConflict =
+    selectedStudentInfo?.has_conflict ?? selectedStudentContext?.has_conflict ?? false;
+  const normalizedClauseQuery = clauseQuery.trim().toLowerCase();
+  const filteredClauses = clauses
+    .filter((clause) => {
+      if (!normalizedClauseQuery) {
+        return true;
+      }
+
+      const haystack = `${clause.title} ${clause.category} ${clause.description}`.toLowerCase();
+      return normalizedClauseQuery.split(/\s+/).every((tokenPart) => haystack.includes(tokenPart));
+    })
+    .slice(0, 10);
+  const selectedClause = clauses.find((clause) => clause.title === formData.clause) || null;
+
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+      <div className="panel px-6 py-14 text-center">
+        <Loader2 className="mx-auto h-7 w-7 animate-spin text-[color:var(--accent)]" />
+        <p className="mt-3 text-sm muted">Loading tab editor...</p>
       </div>
     );
   }
 
   if (!sheet) {
-    return <div className="py-20 text-center text-white">Tab not found</div>;
+    return (
+      <div className="panel px-6 py-14 text-center">
+        <p className="text-xl font-semibold">Tab not found</p>
+      </div>
+    );
   }
 
   const canManageWorkflow = ['ADMIN', 'SUPERADMIN'].includes(user?.role || '');
@@ -334,463 +435,401 @@ export default function TabDetailsPage() {
   const isReview = sheet.status === 'UNDER_REVIEW';
   const isApproved = sheet.status === 'FINAL_APPROVED';
   const isSent = sheet.status === 'SENT';
-  const canResendPersonal = isSent && canManageWorkflow;
-  const canEdit = canManageWorkflow;
   const parentHref = sheet.spreadsheet?.id ? `/sheets/${sheet.spreadsheet.id}` : '/sheets';
-  const selectedRoles = selectedStudentInfo?.roles || selectedStudentContext?.roles || [];
-  const selectedPenaltyHistory = selectedStudentInfo?.penalty_history || [];
-  const selectedPenaltyCount = selectedStudentInfo?.risk_indicator.total_penalties ?? selectedStudentContext?.penalty_count ?? 0;
-  const selectedHasConflict = selectedStudentInfo?.has_conflict ?? selectedStudentContext?.has_conflict ?? false;
-  const normalizedClauseQuery = clauseQuery.trim().toLowerCase();
-  const getClauseKey = (clause: ClauseOption, index: number) =>
-    clause.id || `${clause.title}-${clause.category}-${index}`;
-  const filteredClauses = clauses
-    .filter((clause) => {
-      if (!normalizedClauseQuery) return true;
-      const haystack = `${clause.title} ${clause.category} ${clause.description}`.toLowerCase();
-      return normalizedClauseQuery.split(/\s+/).every((token) => haystack.includes(token));
-    })
-    .slice(0, 10);
-  const selectedClause = clauses.find((clause) => clause.title === formData.clause) || null;
 
   return (
     <div className="space-y-6">
-      <div className="mb-8 flex flex-wrap items-start gap-4">
-        <button
-          onClick={() => router.push(parentHref)}
-          className="mt-1 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1">
-          {sheet.spreadsheet && (
-            <Link href={parentHref} className="mb-2 inline-flex text-sm text-zinc-500 transition-colors hover:text-white">
-              {sheet.spreadsheet.name}
-            </Link>
-          )}
-          <h1 className="flex flex-wrap items-center gap-3 text-3xl font-bold tracking-tight text-white">
-            {sheet.name}
-            <span className={`rounded-full border px-3 py-1 text-sm font-medium ${
-              isDraft ? 'border-zinc-700 bg-zinc-800 text-zinc-300' :
-              isReview ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' :
-              isApproved ? 'border-green-500/30 bg-green-500/10 text-green-400' :
-              'border-blue-500/30 bg-blue-500/10 text-blue-400'
-            }`}>
-              {sheet.status}
-            </span>
-          </h1>
-          <p className="text-zinc-400">Created by {sheet.creator?.email || sheet.created_by}</p>
-        </div>
-
-        <div className="ml-auto flex flex-wrap gap-3">
-          <button
-            onClick={handleSyncToGoogle}
-            disabled={syncing || sheet.rows.length === 0}
-            className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2.5 font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
-          >
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Sync to Google
+      <section className="panel overflow-hidden p-6 sm:p-8">
+        <div className="flex flex-wrap items-start gap-4">
+          <button className="button-secondary px-4 py-2.5" onClick={() => router.push(parentHref)} type="button">
+            <ArrowLeft className="h-4 w-4" />
+            Back
           </button>
 
-          <button
-            onClick={handleDownloadCsv}
-            disabled={downloadingCsv || sheet.rows.length === 0}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 font-medium text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {downloadingCsv ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download CSV
-          </button>
+          <div className="min-w-0 flex-1">
+            {sheet.spreadsheet && (
+              <Link className="eyebrow" href={parentHref}>
+                {sheet.spreadsheet.name}
+              </Link>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-3xl font-bold sm:text-4xl">{sheet.name}</h2>
+              <span className={`status-pill ${statusTone(sheet.status)}`}>{sheet.status}</span>
+            </div>
+            <p className="mt-3 text-base muted">
+              Created by {sheet.creator?.email || sheet.created_by}. Use the workflow controls below to move this tab from draft through dispatch.
+            </p>
+          </div>
 
-          {isDraft && canManageWorkflow && (
+          <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => changeStatus('UNDER_REVIEW')}
-              className="flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2.5 font-semibold text-black transition-colors hover:bg-yellow-400"
+              className="button-secondary"
+              disabled={syncing || !sheet.rows.length}
+              onClick={handleSync}
+              type="button"
             >
-              <Send className="h-4 w-4" /> Submit for Review
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync
             </button>
-          )}
-          {isReview && canManageWorkflow && (
-            <>
-              <button
-                onClick={() => changeStatus('DRAFT')}
-                className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2.5 font-semibold text-white transition-colors hover:bg-red-600"
-              >
-                <AlertTriangle className="h-4 w-4" /> Reject to Draft
-              </button>
-              <button
-                onClick={() => changeStatus('FINAL_APPROVED')}
-                className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 font-semibold text-black transition-colors hover:bg-green-400"
-              >
-                <CheckCircle className="h-4 w-4" /> Approve Tab
-              </button>
-            </>
-          )}
-          {isApproved && canManageWorkflow && (
             <button
-              onClick={() => changeStatus('SENT')}
-              className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-blue-600"
+              className="button-secondary"
+              disabled={downloadingCsv || !sheet.rows.length}
+              onClick={downloadCsv}
+              type="button"
             >
-              <Send className="h-4 w-4" /> Dispatch Emails
+              {downloadingCsv ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              CSV
             </button>
-          )}
-          <button
-            onClick={handleDeleteSheet}
-            className="flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2.5 font-medium text-red-400 transition-colors hover:bg-red-500/10"
-          >
-            <Trash2 className="h-4 w-4" /> Delete Tab
-          </button>
+            {isDraft && canManageWorkflow && (
+              <button className="button-primary" onClick={() => changeStatus('UNDER_REVIEW')} type="button">
+                <Send className="h-4 w-4" />
+                Submit for review
+              </button>
+            )}
+            {isReview && canManageWorkflow && (
+              <>
+                <button className="button-secondary border-red-500/25 text-red-400 hover:bg-red-500/10" onClick={() => changeStatus('DRAFT')} type="button">
+                  <AlertTriangle className="h-4 w-4" />
+                  Reject to draft
+                </button>
+                <button className="button-primary" onClick={() => changeStatus('FINAL_APPROVED')} type="button">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Approve tab
+                </button>
+              </>
+            )}
+            {isApproved && canManageWorkflow && (
+              <button className="button-primary" onClick={() => changeStatus('SENT')} type="button">
+                <Send className="h-4 w-4" />
+                Dispatch emails
+              </button>
+            )}
+            <button className="button-secondary border-red-500/25 text-red-400 hover:bg-red-500/10" onClick={deleteSheet} type="button">
+              <Trash2 className="h-4 w-4" />
+              Delete tab
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       {banner && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-lg border p-3 text-center text-sm ${
+        <div
+          className={`rounded-3xl border px-4 py-3 text-sm ${
             banner.type === 'success'
-              ? 'border-green-500/20 bg-green-500/10 text-green-400'
-              : 'border-destructive/20 bg-destructive/10 text-red-400'
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+              : 'border-red-500/20 bg-red-500/10 text-red-300'
           }`}
         >
           {banner.text}
-        </motion.div>
+        </div>
       )}
 
-      <div className="glass-card overflow-hidden border-zinc-800">
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-black/50 p-6">
+      <section className="panel overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] px-5 py-5 sm:px-6">
           <div>
-            <h2 className="text-xl font-bold text-white">Penalty Records ({sheet.rows.length})</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              {canEdit
-                ? isSent
-                  ? 'This tab has already been dispatched. You can still add, edit, delete, sync, and resend mail only to affected students.'
-                  : 'You can add, edit, or delete penalty records at any stage. Sync to Google whenever you are ready.'
-                : 'This tab is read-only for your account.'}
+            <p className="text-lg font-semibold">Penalty records</p>
+            <p className="mt-1 text-sm muted">
+              {sheet.rows.length} record{sheet.rows.length === 1 ? '' : 's'} in this tab.
+              {isSent
+                ? ' This tab has already been dispatched; updates remain possible, and you can resend mail per student.'
+                : ' You can keep editing before dispatch.'}
             </p>
           </div>
-          {canEdit && (
-            <button
-              onClick={openCreateRow}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-zinc-200"
-            >
-              <Plus className="h-4 w-4" /> Add Record
+          {canManageWorkflow && (
+            <button className="button-primary" onClick={openCreateRow} type="button">
+              <Plus className="h-4 w-4" />
+              Add record
             </button>
           )}
         </div>
 
-        {showRowForm && canEdit && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            className="border-b border-zinc-800 bg-zinc-900 p-6"
-          >
-            <form onSubmit={handleRowSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:col-span-3">
+        {showRowForm && canManageWorkflow && (
+          <div className="border-b border-[var(--line)] px-5 py-5 sm:px-6">
+            <form className="grid gap-4" onSubmit={handleRowSubmit}>
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
                 <div className="relative">
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Search Student</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                    <input
-                      type="text"
-                      value={studentQuery}
-                      onChange={(e) => setStudentQuery(e.target.value)}
-                      placeholder="Type name or roll..."
-                      className="w-full rounded-lg border border-zinc-700 bg-black/50 py-2 pl-9 pr-3 text-sm text-white focus:ring-1 focus:ring-primary/50"
-                    />
-                  </div>
-                  {studentResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
-                      {studentResults.map((student, index) => (
-                        <div
-                          key={`${student.roll}-${index}`}
-                          onClick={() => selectStudent(student)}
-                          className="cursor-pointer px-4 py-3 text-sm text-white hover:bg-zinc-800"
+                  <label className="mb-2 block text-sm font-semibold">Search student</label>
+                  <Search className="pointer-events-none absolute left-4 top-[3.05rem] h-4 w-4 text-[color:var(--foreground-soft)]" />
+                  <input
+                    className="field pl-11"
+                    onChange={(event) => {
+                      setStudentQuery(event.target.value);
+                      if (event.target.value.trim().length < 3) {
+                        setStudentResults([]);
+                      }
+                    }}
+                    placeholder="Type name or roll number"
+                    type="text"
+                    value={studentQuery}
+                  />
+                  {!!studentResults.length && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[24px] border border-[var(--line)] bg-[color:var(--surface-strong)] shadow-xl">
+                      {studentResults.map((student) => (
+                        <button
+                          key={student.roll}
+                          className="block w-full border-b border-[var(--line)] px-4 py-3 text-left last:border-b-0 hover:bg-white/60 dark:hover:bg-white/5"
+                          onClick={() => void selectStudent(student)}
+                          type="button"
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{student.name}</span>
-                            <span className="text-zinc-500">({student.roll})</span>
-                          </div>
-                          <div className="mt-2">
-                            <RoleBadges roles={student.roles} maxVisible={2} />
-                          </div>
-                        </div>
+                          <p className="font-semibold">{student.name}</p>
+                          <p className="mt-1 text-sm muted">{student.roll}</p>
+                        </button>
                       ))}
                     </div>
                   )}
                 </div>
+
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Name</label>
-                  <input
-                    readOnly
-                    value={formData.name}
-                    className="w-full rounded-lg border border-zinc-800 bg-black/50 px-3 py-2 text-sm text-white opacity-70"
-                    required
-                  />
+                  <label className="mb-2 block text-sm font-semibold">Name</label>
+                  <input className="field" readOnly type="text" value={formData.name} />
                 </div>
+
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Roll No</label>
-                  <input
-                    readOnly
-                    value={formData.roll_no}
-                    className="w-full rounded-lg border border-zinc-800 bg-black/50 px-3 py-2 text-sm text-white opacity-70"
-                    required
-                  />
+                  <label className="mb-2 block text-sm font-semibold">Roll number</label>
+                  <input className="field" readOnly type="text" value={formData.roll_no} />
                 </div>
               </div>
 
-              {selectedStudentContext && (
-                <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4 lg:col-span-3">
+              {(selectedStudentContext || selectedStudentInfo) && (
+                <div className="rounded-[28px] border border-[var(--line)] bg-white/55 p-5 dark:bg-white/5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Election Role Intelligence</p>
+                      <p className="text-sm font-semibold">Student intelligence snapshot</p>
                       <div className="mt-3">
                         <RoleBadges roles={selectedRoles} />
                       </div>
                     </div>
-                    <div className="text-right text-sm text-zinc-400">
+                    <div className="text-right text-sm muted">
                       <p>Total penalties: {selectedPenaltyCount}</p>
-                      {selectedPenaltyCount >= 2 && <p className="mt-1 text-red-300">Repeat offender flagged</p>}
+                      {selectedPenaltyCount >= 2 && <p className="mt-1 text-red-400">Repeat offender flagged</p>}
                     </div>
                   </div>
+
                   {selectedHasConflict && (
-                    <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+                    <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
                       Conflict detected: this student appears in multiple candidate groups for the same election year.
                     </div>
                   )}
-                  <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+
+                  <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white/65 p-4 dark:bg-white/5">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Previous Penalties</p>
-                      {loadingStudentInfo && <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />}
+                      <p className="text-sm font-semibold">Recent penalty history</p>
+                      {loadingStudentInfo && <Loader2 className="h-4 w-4 animate-spin text-[color:var(--accent)]" />}
                     </div>
                     {loadingStudentInfo ? (
-                      <p className="mt-3 text-sm text-zinc-500">Loading previous penalty history...</p>
-                    ) : selectedPenaltyHistory.length === 0 ? (
-                      <p className="mt-3 text-sm text-zinc-500">No previous penalties found for this student.</p>
+                      <p className="mt-3 text-sm muted">Loading previous penalty history...</p>
+                    ) : !selectedPenaltyHistory.length ? (
+                      <p className="mt-3 text-sm muted">No previous penalties found for this student.</p>
                     ) : (
                       <div className="mt-3 space-y-3">
                         {selectedPenaltyHistory.slice(0, 3).map((penalty) => (
-                          <div key={penalty.id} className="rounded-lg border border-zinc-800 bg-black/40 px-4 py-3">
-                            <div className="flex flex-wrap items-center gap-2 text-xs">
-                              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 font-medium text-zinc-300">
-                                {penalty.nature}
-                              </span>
-                              <span className="text-zinc-500">
-                                {new Date(penalty.timestamp).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-sm font-medium text-white">{penalty.clause}</p>
-                            <p className="mt-1 text-sm text-zinc-400">{penalty.remarks}</p>
+                          <div key={penalty.id} className="rounded-2xl border border-[var(--line)] bg-white/75 px-4 py-3 dark:bg-white/5">
+                            <p className="text-sm font-semibold">{penalty.clause}</p>
+                            <p className="mt-1 text-sm muted">{penalty.remarks}</p>
+                            <p className="mt-2 text-xs text-mono-soft">
+                              {penalty.nature} • {new Date(penalty.timestamp).toLocaleDateString()}
+                            </p>
                           </div>
                         ))}
-                        {selectedPenaltyHistory.length > 3 && (
-                          <p className="text-xs text-zinc-500">
-                            Showing latest 3 of {selectedPenaltyHistory.length} previous penalties. Full history is available from the Info panel.
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Student Email</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="student@example.com"
-                  className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
-                >
-                  <option>GBM</option>
-                  <option>Candidate</option>
-                  <option>Office Bearer</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Clause</label>
-                <div className="relative">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Student email</label>
                   <input
+                    className="field"
+                    onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                     required
-                    value={clauseQuery}
-                    onChange={(e) => {
-                      const nextQuery = e.target.value;
-                      setClauseQuery(nextQuery);
+                    type="email"
+                    value={formData.email}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Type</label>
+                  <select
+                    className="field"
+                    onChange={(event) => setFormData({ ...formData, type: event.target.value })}
+                    value={formData.type}
+                  >
+                    <option>GBM</option>
+                    <option>Candidate</option>
+                    <option>Office Bearer</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Nature</label>
+                  <select
+                    className="field"
+                    onChange={(event) => setFormData({ ...formData, nature: event.target.value })}
+                    value={formData.nature}
+                  >
+                    {['Level 0', 'Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6'].map((level) => (
+                      <option key={level}>{level}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
+                  <label className="mb-2 block text-sm font-semibold">Clause</label>
+                  <input
+                    className="field"
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setClauseQuery(nextValue);
                       setShowClauseResults(true);
-                      if (formData.clause && nextQuery !== formData.clause) {
+                      if (formData.clause && nextValue !== formData.clause) {
                         setFormData({ ...formData, clause: '' });
                       }
                     }}
                     onFocus={() => setShowClauseResults(true)}
-                    placeholder="Search clause, section, or exact line..."
-                    className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
+                    placeholder="Search clause or section"
+                    required
+                    type="text"
+                    value={clauseQuery}
                   />
-                  {showClauseResults && filteredClauses.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                  {showClauseResults && !!filteredClauses.length && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[24px] border border-[var(--line)] bg-[color:var(--surface-strong)] shadow-xl">
                       {filteredClauses.map((clause, index) => (
                         <button
-                          key={getClauseKey(clause, index)}
+                          key={clause.id || `${clause.title}-${clause.category}-${index}`}
+                          className="block w-full border-b border-[var(--line)] px-4 py-3 text-left last:border-b-0 hover:bg-white/60 dark:hover:bg-white/5"
+                          onClick={() => {
+                            setFormData({ ...formData, clause: clause.title });
+                            setClauseQuery(clause.title);
+                            setShowClauseResults(false);
+                          }}
                           type="button"
-                          onClick={() => selectClause(clause)}
-                          className="block w-full border-b border-zinc-800 px-4 py-3 text-left last:border-b-0 hover:bg-zinc-800"
                         >
-                          <p className="text-sm font-medium text-white">{clause.title}</p>
-                          <p className="mt-1 text-xs text-zinc-500">{clause.category}</p>
-                          <p className="mt-1 line-clamp-2 text-xs text-zinc-400">{clause.description}</p>
+                          <p className="font-semibold">{clause.title}</p>
+                          <p className="mt-1 text-xs text-mono-soft">{clause.category}</p>
+                          <p className="mt-1 text-sm muted">{clause.description}</p>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Nature (Level)</label>
-                <select
-                  value={formData.nature}
-                  onChange={(e) => setFormData({ ...formData, nature: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
-                >
-                  <option>Level 0</option>
-                  <option>Level 1</option>
-                  <option>Level 2</option>
-                  <option>Level 3</option>
-                  <option>Level 4</option>
-                  <option>Level 5</option>
-                  <option>Level 6</option>
-                </select>
-              </div>
 
               {selectedClause && (
-                <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4 lg:col-span-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Selected Clause</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
-                      {selectedClause.title}
-                    </span>
-                    <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200">
-                      {selectedClause.category}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm text-zinc-300">{selectedClause.description}</p>
+                <div className="rounded-[28px] border border-[var(--line)] bg-white/55 p-5 dark:bg-white/5">
+                  <p className="text-sm font-semibold">Selected clause</p>
+                  <p className="mt-3 text-base font-semibold">{selectedClause.title}</p>
+                  <p className="mt-2 text-sm muted">{selectedClause.description}</p>
+                  <span className="status-pill mt-4 border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                    {selectedClause.category}
+                  </span>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:col-span-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Remarks (Official)</label>
+                  <label className="mb-2 block text-sm font-semibold">Remarks</label>
                   <input
+                    className="field"
+                    onChange={(event) => setFormData({ ...formData, remarks: event.target.value })}
+                    placeholder="Official EC remark"
                     required
+                    type="text"
                     value={formData.remarks}
-                    onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                    placeholder="E.g., Warning Issued"
-                    className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Comment (Internal EC note)</label>
+                  <label className="mb-2 block text-sm font-semibold">Internal note</label>
                   <input
+                    className="field"
+                    onChange={(event) => setFormData({ ...formData, comment: event.target.value })}
+                    placeholder="Internal EC note"
+                    type="text"
                     value={formData.comment}
-                    onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                    placeholder="Internal note..."
-                    className="w-full rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary/50"
                   />
                 </div>
               </div>
 
-              <div className="mt-2 flex justify-end gap-3 lg:col-span-3">
-                <button
-                  type="button"
-                  onClick={resetRowForm}
-                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-                >
+              <div className="flex flex-wrap justify-end gap-3">
+                <button className="button-secondary" onClick={resetRowForm} type="button">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200"
-                >
-                  <Save className="h-4 w-4" /> {editingRowId ? 'Update Record' : 'Save Record'}
+                <button className="button-primary" type="submit">
+                  <Save className="h-4 w-4" />
+                  {editingRowId ? 'Update record' : 'Save record'}
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-800 bg-black text-xs uppercase text-zinc-400">
-              <tr>
-                <th className="px-4 py-4 font-medium">Type</th>
-                <th className="px-4 py-4 font-medium">Student</th>
-                <th className="px-4 py-4 font-medium">Clause</th>
-                <th className="px-4 py-4 font-medium">Level</th>
-                <th className="px-4 py-4 font-medium">Remarks</th>
-                <th className="px-4 py-4 text-right font-medium">Actions</th>
+        <div className="hidden overflow-x-auto xl:block">
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-[var(--line)] bg-white/50 dark:bg-white/5">
+              <tr className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground-soft)]">
+                <th className="px-6 py-4 font-semibold">Student</th>
+                <th className="px-6 py-4 font-semibold">Clause</th>
+                <th className="px-6 py-4 font-semibold">Level</th>
+                <th className="px-6 py-4 font-semibold">Remarks</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800 bg-black/30">
-              {sheet.rows.length === 0 ? (
+            <tbody>
+              {!sheet.rows.length ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
-                    No penalty records yet. Click "Add Record" to get started.
+                  <td className="px-6 py-14 text-center text-sm muted" colSpan={5}>
+                    No penalty records yet. Use the Add record button to start.
                   </td>
                 </tr>
               ) : (
-                sheet.rows.map((row: any) => (
-                  <tr key={row.id} className="group transition-colors hover:bg-zinc-900/50">
-                    <td className="px-4 py-3 text-zinc-300">{row.type}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-white">{row.name}</p>
-                      <p className="text-xs text-zinc-500">{row.roll_no} | {row.email}</p>
-                      <div className="mt-2">
-                        <RoleBadges roles={row.student_roles || []} maxVisible={2} />
+                sheet.rows.map((row) => (
+                  <tr key={row.id} className="border-b border-[var(--line)] align-top last:border-b-0">
+                    <td className="px-6 py-5">
+                      <p className="font-semibold">{row.name}</p>
+                      <p className="mt-1 text-sm muted">{row.roll_no} • {row.email}</p>
+                      <div className="mt-3">
+                        <RoleBadges maxVisible={2} roles={row.student_roles || []} />
                       </div>
                       {row.student_has_conflict && (
-                        <p className="mt-2 text-xs text-yellow-300">Conflict detected across candidate groups</p>
+                        <p className="mt-2 text-xs font-semibold text-amber-400">Conflict detected across candidate groups</p>
                       )}
-                      {row.student_penalty_count >= 2 && (
-                        <p className="mt-1 text-xs text-red-300">Repeat offender | {row.student_penalty_count} penalties</p>
+                      {(row.student_penalty_count || 0) >= 2 && (
+                        <p className="mt-1 text-xs font-semibold text-red-400">
+                          Repeat offender • {row.student_penalty_count} penalties
+                        </p>
                       )}
                     </td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-zinc-300" title={row.clause}>{row.clause}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 font-mono text-xs text-zinc-300">{row.nature}</span>
+                    <td className="max-w-[320px] px-6 py-5">
+                      <p className="font-medium">{row.clause}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-zinc-300">{row.remarks}</p>
-                      {row.comment && <p className="mt-1 text-xs italic text-zinc-600">Note: {row.comment}</p>}
+                    <td className="px-6 py-5">
+                      <span className="status-pill border-[var(--line)] bg-white/55 dark:bg-white/5">{row.nature}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-6 py-5">
+                      <p>{row.remarks}</p>
+                      {row.comment && <p className="mt-2 text-sm muted">Note: {row.comment}</p>}
+                    </td>
+                    <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-2">
-                        <StudentInfoButton
-                          roll={row.roll_no}
-                          buttonClassName="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800"
-                        />
-                        {canResendPersonal && (
+                        <StudentInfoButton label="Profile" roll={row.roll_no} />
+                        {isSent && canManageWorkflow && (
                           <button
-                            onClick={() => resendRowEmail(row.id)}
+                            className="button-secondary px-3 py-2.5"
                             disabled={resendingRowId === row.id}
-                            className="rounded-lg border border-blue-500/30 p-2 text-blue-300 hover:bg-blue-500/10 disabled:opacity-50"
-                            title="Resend mail to this student"
+                            onClick={() => resendRowEmail(row.id)}
+                            type="button"
                           >
                             {resendingRowId === row.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </button>
                         )}
-                        {canEdit && (
+                        {canManageWorkflow && (
                           <>
-                            <button onClick={() => openEditRow(row)} className="rounded-lg border border-zinc-700 p-2 text-zinc-300 hover:bg-zinc-800" title="Edit">
+                            <button className="button-secondary px-3 py-2.5" onClick={() => void openEditRow(row)} type="button">
                               <Pencil className="h-4 w-4" />
                             </button>
-                            <button onClick={() => deleteRow(row.id)} className="rounded-lg border border-red-500/30 p-2 text-red-300 hover:bg-red-500/10" title="Delete">
+                            <button
+                              className="button-secondary border-red-500/25 px-3 py-2.5 text-red-400 hover:bg-red-500/10"
+                              onClick={() => deleteRow(row.id)}
+                              type="button"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </>
@@ -803,7 +842,57 @@ export default function TabDetailsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        <div className="grid gap-4 p-4 xl:hidden">
+          {sheet.rows.map((row) => (
+            <div key={row.id} className="rounded-[28px] border border-[var(--line)] bg-white/55 p-4 dark:bg-white/5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{row.name}</p>
+                  <p className="mt-1 text-sm muted">{row.roll_no} • {row.email}</p>
+                </div>
+                <span className="status-pill border-[var(--line)] bg-white/65 dark:bg-white/5">{row.nature}</span>
+              </div>
+              <div className="mt-3">
+                <RoleBadges maxVisible={2} roles={row.student_roles || []} />
+              </div>
+              <p className="mt-4 text-sm font-semibold">{row.clause}</p>
+              <p className="mt-2 text-sm muted">{row.remarks}</p>
+              {row.comment && <p className="mt-2 text-sm muted">Note: {row.comment}</p>}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <StudentInfoButton label="Profile" roll={row.roll_no} />
+                {isSent && canManageWorkflow && (
+                  <button className="button-secondary px-4 py-2.5" onClick={() => resendRowEmail(row.id)} type="button">
+                    {resendingRowId === row.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Resend
+                  </button>
+                )}
+                {canManageWorkflow && (
+                  <>
+                    <button className="button-secondary px-4 py-2.5" onClick={() => void openEditRow(row)} type="button">
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button
+                      className="button-secondary border-red-500/25 px-4 py-2.5 text-red-400 hover:bg-red-500/10"
+                      onClick={() => deleteRow(row.id)}
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {!sheet.rows.length && (
+            <div className="px-6 py-10 text-center text-sm muted">
+              No penalty records yet. Use the Add record button to start.
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

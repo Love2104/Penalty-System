@@ -8,8 +8,8 @@ interface RoleBadgesProps {
 }
 
 export default function RoleBadges({ roles = [], maxVisible }: RoleBadgesProps) {
-  if (roles.length === 0) {
-    return <span className="text-xs text-zinc-500">No election role</span>;
+  if (!roles.length) {
+    return <span className="text-xs muted">No election role mapped</span>;
   }
 
   const visibleRoles = typeof maxVisible === 'number' ? roles.slice(0, maxVisible) : roles;
@@ -20,14 +20,14 @@ export default function RoleBadges({ roles = [], maxVisible }: RoleBadgesProps) 
       {visibleRoles.map((role, index) => (
         <span
           key={`${role.role_type}-${role.candidate_roll}-${role.group_id}-${role.election_year}-${index}`}
+          className={`status-pill ${getRoleBadgeClasses(role.role_type)}`}
           title={`${role.role_type} | ${role.candidate_name} | ${role.post} | ${role.election_year}`}
-          className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${getRoleBadgeClasses(role.role_type)}`}
         >
           {buildRoleBadgeLabel(role)}
         </span>
       ))}
       {hiddenCount > 0 && (
-        <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-zinc-300">
+        <span className="status-pill border-[var(--line)] bg-white/60 text-[color:var(--foreground-muted)] dark:bg-white/5">
           +{hiddenCount} more
         </span>
       )}

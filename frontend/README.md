@@ -22,8 +22,18 @@ This is the frontend user interface for the EC Penalty Management System, built 
    npm install
    ```
 
-2. **Backend Configuration:**
-   Ensure the backend is running on `http://localhost:5000`. The frontend uses Axios interceptors configured in `src/lib/api.ts` to automatically route requests to this URL.
+2. **Environment Variables:**
+   Create `frontend/.env.local` from [`frontend/.env.example`](./.env.example):
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:5000/api"
+   ```
+
+   Only public client-safe values should live in frontend env files. Google service-account credentials must stay in the backend only.
+
+3. **Backend Configuration:**
+   Ensure the backend is running on `http://localhost:5000`. The frontend uses Axios configured in `src/lib/api.ts` to route requests to `NEXT_PUBLIC_API_URL`.
+
+   Full backend/frontend env setup instructions are documented in [`../ENVIRONMENT_SETUP.md`](../ENVIRONMENT_SETUP.md).
 
 ## Running the Application
 
@@ -46,4 +56,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 * **`/sheets`**
   * List of all penalty sheets in the system. Allows EC members to create new draft sheets.
 * **`/sheets/[id]`**
-  * The core editor interface. EC members can add penalty rows with student auto-complete here. SuperAdmins (CEO) use this page to review, reject, approve, and dispatch emails for the sheet.
+  * The core editor interface. EC members can add penalty rows with student auto-complete here. Superadmins use this page to review, reject, approve, and dispatch emails for the sheet.

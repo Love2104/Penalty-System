@@ -4,24 +4,43 @@ import * as path from 'path';
 
 const prisma = new PrismaClient();
 
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const resolveSuperAdminEmails = () => {
+  const rawValues = [process.env.SUPERADMIN_EMAIL, process.env.SUPERADMIN_EMAILS]
+    .filter(Boolean)
+    .flatMap((value) => value!.split(','))
+    .map(normalizeEmail)
+    .filter(Boolean);
+
+  return [...new Set(rawValues)];
+};
+
 async function main() {
   console.log('Seeding data...');
 
-  // Create CEO
-  const superAdminEmail = process.env.SUPERADMIN_EMAIL || 'lovec23@iitk.ac.in';
-  await prisma.user.upsert({
-    where: { email: superAdminEmail },
-    update: {
-      role: 'SUPERADMIN',
-      is_verified: true,
-    },
-    create: {
-      email: superAdminEmail,
-      role: 'SUPERADMIN',
-      is_verified: true,
-    },
-  });
-  console.log(`CEO user created/updated: ${superAdminEmail}`);
+  const superAdminEmails = resolveSuperAdminEmails();
+  if (!superAdminEmails.length) {
+    throw new Error(
+      'Set SUPERADMIN_EMAIL (or SUPERADMIN_EMAILS) in backend/.env before running the seed command.'
+    );
+  }
+
+  for (const superAdminEmail of superAdminEmails) {
+    await prisma.user.upsert({
+      where: { email: superAdminEmail },
+      update: {
+        role: 'SUPERADMIN',
+        is_verified: true,
+      },
+      create: {
+        email: superAdminEmail,
+        role: 'SUPERADMIN',
+        is_verified: true,
+      },
+    });
+  }
+  console.log(`Superadmin user(s) created/updated: ${superAdminEmails.join(', ')}`);
 
   const clauseSeedPath = path.join(__dirname, 'data', 'coc-ge-2026-clauses.json');
   if (fs.existsSync(clauseSeedPath)) {
@@ -45,9 +64,6 @@ async function main() {
 
     console.log(`Found ${students.length} students. Seeding in chunks to avoid memory issues...`);
 
-    // We'll take the first 1000 for quick seeding if it's too large, or we can use createMany with chunks.
-    // The prompt says 199k records, SQLite might be slow. We'll do chunks of 5000.
-
     const chunkSize = 5000;
     let count = 0;
     for (let i = 0; i < students.length; i += chunkSize) {
@@ -66,10 +82,6 @@ async function main() {
         email: s.username ? `${s.username}@iitk.ac.in` : null, // deriving email
       }));
 
-      // we use a transaction or createMany. createMany is supported by sqlite.
-      // But skipDuplicates is NOT supported by sqlite in createMany in Prisma until recently maybe? 
-      // Actually SQLite does not support skipDuplicates. Let's do it carefully or use transactions with upsert.
-      // Actually, since we start fresh, createMany without skipDuplicates is fine as long as there are no duplicates.
       try {
         await prisma.student.createMany({
           data: chunk,

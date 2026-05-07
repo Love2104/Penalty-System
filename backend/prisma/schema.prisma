@@ -3,11 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Emulating enum using String since SQLite doesn't support enums natively
+// Roles and statuses are kept as String values for app simplicity.
 // Role: "SUPERADMIN" | "ADMIN"
 // SheetStatus: "DRAFT" | "UNDER_REVIEW" | "FINAL_APPROVED" | "SENT"
 
@@ -128,6 +129,16 @@ model Config {
   value String
 
   @@map("configs")
+}
+
+model OtpCode {
+  email      String   @id
+  otp_hash   String
+  expires_at DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("otp_codes")
 }
 
 model RoleMapping {
