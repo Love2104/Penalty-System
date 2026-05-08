@@ -16,8 +16,14 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
   }
 
   const token = authHeader.split(' ')[1];
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    return res.status(500).json({ error: 'JWT secret is not configured' });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = jwt.verify(token, jwtSecret) as AuthRequest['user'];
     req.user = decoded;
     next();
   } catch (error) {

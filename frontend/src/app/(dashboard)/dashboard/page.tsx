@@ -1,80 +1,276 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Users, FileText, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  ArrowRight,
+  Clock3,
+  FileSpreadsheet,
+  Layers3,
+  Send,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
+import api from '@/lib/api';
 
-const stats = [
-  { name: 'Total Sheets', value: '12', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  { name: 'Under Review', value: '3', icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  { name: 'Approved', value: '7', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
-  { name: 'Total Students Penalized', value: '154', icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-];
+interface RecentTab {
+  id: string;
+  name: string;
+  status: string;
+  created_at: string;
+  creator?: { email: string };
+  spreadsheet?: { id: string; name: string };
+}
 
-export default function Dashboard() {
-  const { user } = useAuthStore();
+interface DashboardStatsResponse {
+  totalSpreadsheets: number;
+  totalTabs: number;
+  underReview: number;
+  approved: number;
+  totalStudentsPenalized: number;
+  recentTabs: RecentTab[];
+}
+
+const metricCards = [
+  {
+    key: 'totalSpreadsheets',
+    label: 'Linked spreadsheets',
+    icon: FileSpreadsheet,
+    accent: 'text-sky-500',
+  },
+  {
+    key: 'totalTabs',
+    label: 'Active tabs',
+    icon: Layers3,
+    accent: 'text-violet-500',
+  },
+  {
+    key: 'underReview',
+    label: 'Awaiting review',
+    icon: Clock3,
+    accent: 'text-amber-500',
+  },
+  {
+    key: 'totalStudentsPenalized',
+    label: 'Students impacted',
+    icon: Users,
+    accent: 'text-emerald-500',
+  },
+] as const;
+
+const statusTone = (status: string) => {
+  switch (status) {
+    case 'UNDER_REVIEW':
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    case 'FINAL_APPROVED':
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'SENT':
+      return 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300';
+    default:
+      return 'border-[var(--line)] bg-white/55 text-[color:var(--foreground-muted)] dark:bg-white/5';
+  }
+};
+
+export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDashboard = async () => {
+      try {
+        const response = await api.get<DashboardStatsResponse>('/sheets/dashboard-stats');
+        if (active) {
+          setStats(response.data);
+        }
+      } catch {
+        if (active) {
+          setError('Unable to load the dashboard right now.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const underReviewTabs = useMemo(
+    () => stats?.recentTabs.filter((tab) => tab.status === 'UNDER_REVIEW') ?? [],
+    [stats],
+  );
+
+  if (loading) {
+    return (
+      <div className="panel flex min-h-[420px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--accent)] border-t-transparent" />
+          <p className="mt-4 text-sm muted">Loading dashboard intelligence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="panel px-6 py-14 text-center">
+        <ShieldCheck className="mx-auto h-10 w-10 text-[color:var(--accent)]" />
+        <h2 className="mt-4 text-2xl font-semibold">Dashboard unavailable</h2>
+        <p className="mt-2 muted">{error || 'No dashboard data was returned.'}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Overview</h1>
-        <p className="text-zinc-400">Welcome back, {user?.email}. Here is what's happening today.</p>
-      </div>
+    <div className="space-y-5">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="panel p-6 sm:p-7">
+          <p className="eyebrow">Operations snapshot</p>
+          <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">
+            {stats.underReview} tab{stats.underReview === 1 ? '' : 's'} are waiting for review, and {stats.approved} are already approved.
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm muted sm:text-base">
+            Use the dashboard for the current queue, jump to sheets for operational work, and open the student directory when you need more context before approving a case.
+          </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            key={stat.name}
-            className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800"
-          >
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link className="button-primary" href="/sheets">
+              Open sheet operations
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link className="button-secondary" href="/students">
+              Open student directory
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <div className="panel-soft p-5">
+            <p className="text-sm font-semibold">Review queue</p>
+            <p className="mt-3 text-3xl font-bold">{underReviewTabs.length}</p>
+            <p className="mt-2 text-sm muted">Tabs that still need a decision.</p>
+          </div>
+
+          <div className="panel-soft p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500">
+                <Send className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Dispatch readiness</p>
+                <p className="text-sm muted">
+                  {stats.approved} approved tab{stats.approved === 1 ? '' : 's'} are ready for communication handling.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map(({ key, label, icon: Icon, accent }) => (
+          <div key={key} className="panel p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-zinc-400 mb-1">{stat.name}</p>
-                <p className="text-3xl font-bold text-white">{stat.value}</p>
-              </div>
-              <div className={`p-3 rounded-xl ${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
+              <span className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/70 ${accent} dark:bg-white/5`}>
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="text-mono-soft text-xs uppercase tracking-[0.2em]">Live</span>
             </div>
-          </motion.div>
+            <p className="mt-5 text-3xl font-bold">{stats[key].toLocaleString()}</p>
+            <p className="mt-2 text-sm muted">{label}</p>
+          </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 min-h-[400px]">
-          <h2 className="text-xl font-bold text-white mb-4">Recent Sheets</h2>
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl border border-zinc-800 bg-black/50 flex justify-between items-center">
-              <div>
-                <p className="font-medium text-white">Antaragni '23 Penalty Sheet</p>
-                <p className="text-sm text-zinc-500">Created 2 hours ago by admin</p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-                UNDER_REVIEW
-              </span>
+      <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="panel p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow">Review queue</p>
+              <h3 className="mt-2 text-2xl font-semibold">Tabs awaiting action</h3>
             </div>
-            <div className="p-4 rounded-xl border border-zinc-800 bg-black/50 flex justify-between items-center">
-              <div>
-                <p className="font-medium text-white">Techkriti '24 Violations</p>
-                <p className="text-sm text-zinc-500">Created 1 day ago by lovec23</p>
+            <span className="status-pill border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+              {underReviewTabs.length} active
+            </span>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {!underReviewTabs.length ? (
+              <div className="panel-soft px-5 py-10 text-center text-sm muted">
+                Nothing is waiting for review right now.
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
-                FINAL_APPROVED
-              </span>
-            </div>
+            ) : (
+              underReviewTabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  className="panel-soft flex flex-col gap-4 p-4 transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="text-base font-semibold">{tab.name}</p>
+                    <p className="mt-1 text-sm muted">
+                      {tab.spreadsheet?.name || 'Unassigned spreadsheet'} - created by {tab.creator?.email || 'Unknown'}
+                    </p>
+                  </div>
+                  <Link className="button-secondary" href={`/tabs/view?id=${tab.id}`}>
+                    Open tab
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 min-h-[400px]">
-          <h2 className="text-xl font-bold text-white mb-4">Clause Distribution</h2>
-          <div className="flex items-center justify-center h-full pb-10 text-zinc-500">
-            [Chart Placeholder - e.g. Recharts Doughnut]
+        <div className="panel p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">Activity feed</p>
+              <h3 className="mt-2 text-2xl font-semibold">Recent changes</h3>
+            </div>
+            <div className="rounded-2xl border border-[var(--line)] bg-white/55 px-3 py-2 text-xs muted dark:bg-white/5">
+              Latest {stats.recentTabs.length} update{stats.recentTabs.length === 1 ? '' : 's'}
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {!stats.recentTabs.length ? (
+              <div className="panel-soft px-5 py-10 text-center text-sm muted">
+                No recent activity has been recorded yet.
+              </div>
+            ) : (
+              stats.recentTabs.map((tab) => (
+                <Link
+                  key={tab.id}
+                  className="panel-soft block p-4 transition hover:-translate-y-0.5"
+                  href={`/tabs/view?id=${tab.id}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-base font-semibold">{tab.name}</p>
+                      <p className="mt-1 text-sm muted">
+                        {tab.spreadsheet?.name || 'No spreadsheet'} - {tab.creator?.email || 'Unknown'}
+                      </p>
+                    </div>
+                    <span className={`status-pill ${statusTone(tab.status)}`}>{tab.status}</span>
+                  </div>
+                  <p className="mt-4 text-xs text-mono-soft">
+                    {formatDistanceToNow(new Date(tab.created_at), { addSuffix: true })}
+                  </p>
+                </Link>
+              ))
+            )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack --disable-source-maps",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -13,6 +13,8 @@
     "axios": "^1.15.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.13.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
@@ -20,17 +22,19 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.74.0",
     "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
     "zod": "^4.4.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.39",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.14",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "tailwindcss": "^4",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.0",
     "typescript": "^5"
   }
 }

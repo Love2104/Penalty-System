@@ -1,125 +1,224 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { sendMail } from '../services/mailer';
 
-import dotenv from 'dotenv';
-dotenv.config();
+const OTP_EXPIRY_MINUTES = 5;
+const OTP_RESEND_COOLDOWN_SECONDS = 45;
 
-// In-memory OTP store for simplicity. In prod, use Redis or DB.
-const otpStore = new Map<string, { otp: string, expiresAt: number }>();
+const hashOtp = (email: string, otp: string) =>
+  crypto.createHash('sha256').update(`${email.toLowerCase()}::${otp}`).digest('hex');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const safeCompare = (left: string, right: string) => {
+  const leftBuffer = Buffer.from(left, 'utf8');
+  const rightBuffer = Buffer.from(right, 'utf8');
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+};
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const canRequestOtp = (createdAt: Date) => {
+  const cooldownEnds = createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000;
+  return Date.now() >= cooldownEnds;
+};
+
+const isAllowedEmail = (email: string) =>
+  email.endsWith('@iitk.ac.in') || email.endsWith('@gmail.com');
+
+const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
+
+const issueJwtForUser = (user: { id: string; email: string; role: string }) => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT secret is not configured');
+  }
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    jwtSecret,
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'] },
+  );
+
+  return {
+    message: 'Login successful',
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+  };
+};
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
-    
-    if (!email) {
+    const rawEmail = req.body?.email as string | undefined;
+
+    if (!rawEmail) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    if (!email.endsWith('@iitk.ac.in') && !email.endsWith('@gmail.com')) {
+    const email = normalizeEmail(rawEmail);
+
+    if (!isAllowedEmail(email)) {
       return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findAuthorizedUser(email);
     if (!user) {
-      return res.status(403).json({ error: 'Unauthorized email. Please contact CEO for access.' });
+      return res.status(403).json({ error: 'Unauthorized email. Please contact the superadmin for access.' });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
-    otpStore.set(email, { otp, expiresAt });
+    const existingOtp = await prisma.otpCode.findUnique({ where: { email } });
+    if (existingOtp && !canRequestOtp(existingOtp.created_at)) {
+      return res.status(429).json({
+        error: `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      });
+    }
 
-    // In a real scenario, we send it via email.
-    // For local testing, we'll just log it to console as well to make it easy.
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    await prisma.otpCode.upsert({
+      where: { email },
+      update: {
+        otp_hash: hashOtp(email, otp),
+        expires_at: expiresAt,
+      },
+      create: {
+        email,
+        otp_hash: hashOtp(email, otp),
+        expires_at: expiresAt,
+      },
+    });
+
     console.log(`[LOCAL DEV] OTP for ${email} is ${otp}`);
 
-    await transporter.sendMail({
-      from: `"IITK Election Commission" <${process.env.SMTP_USER}>`,
+    await sendMail({
       to: email,
       subject: 'Login OTP - EC Penalty System',
       html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Election Commission Penalty System</h2>
-          <p>Your OTP for login is: <strong style="font-size: 24px;">${otp}</strong></p>
-          <p>This OTP will expire in 5 minutes.</p>
+        <div style="font-family: Arial, sans-serif; padding: 24px; color: #18181b;">
+          <h2 style="margin-bottom: 12px;">Election Commission Penalty System</h2>
+          <p>Your secure login OTP is:</p>
+          <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.24em; margin: 18px 0;">${otp}</p>
+          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
         </div>
-      `
+      `,
+      text: `Your OTP for the EC Penalty System is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
     });
 
-    res.json({ message: 'OTP sent successfully. Please check your email.' });
+    return res.json({ message: 'OTP sent successfully. Please check your email.' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to send OTP' });
+    return res.status(500).json({ error: 'Failed to send OTP' });
   }
 };
 
 export const verifyOtp = async (req: Request, res: Response) => {
   try {
-    const { email, otp } = req.body;
+    const rawEmail = req.body?.email as string | undefined;
+    const otp = req.body?.otp as string | undefined;
 
-    if (!email || !otp) {
+    if (!rawEmail || !otp) {
       return res.status(400).json({ error: 'Email and OTP are required' });
     }
 
-    const storedData = otpStore.get(email);
-    if (!storedData) {
+    const email = normalizeEmail(rawEmail);
+    const otpRecord = await prisma.otpCode.findUnique({ where: { email } });
+
+    if (!otpRecord) {
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
-    if (Date.now() > storedData.expiresAt) {
-      otpStore.delete(email);
+    if (Date.now() > otpRecord.expires_at.getTime()) {
+      await prisma.otpCode.delete({ where: { email } });
       return res.status(400).json({ error: 'OTP has expired' });
     }
 
-    if (storedData.otp !== otp) {
+    const incomingHash = hashOtp(email, otp);
+    if (!safeCompare(otpRecord.otp_hash, incomingHash)) {
       return res.status(400).json({ error: 'Incorrect OTP' });
     }
 
-    // OTP matched
-    otpStore.delete(email);
+    await prisma.otpCode.delete({ where: { email } });
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findAuthorizedUser(email);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Mark as verified if first time
     if (!user.is_verified) {
       await prisma.user.update({
         where: { email },
-        data: { is_verified: true }
+        data: { is_verified: true },
       });
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
-    );
-
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
+    return res.json(
+      issueJwtForUser({
         id: user.id,
         email: user.email,
-        role: user.role
-      }
-    });
-
+        role: user.role,
+      }),
+    );
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to verify OTP' });
+    return res.status(500).json({ error: 'Failed to verify OTP' });
+  }
+};
+
+export const registerAdmin = async (req: Request, res: Response) => {
+  try {
+    const rawEmail = req.body?.email as string | undefined;
+    const role = (req.body?.role as string | undefined) || 'ADMIN';
+
+    if (!rawEmail) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const email = normalizeEmail(rawEmail);
+
+    if (!isAllowedEmail(email)) {
+      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        role,
+        is_verified: true,
+      },
+    });
+
+    return res.json({ message: 'Admin registered successfully', user });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to register admin' });
+  }
+};
+
+export const getUsers = async (_req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+    return res.json(users);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to fetch users' });
   }
 };

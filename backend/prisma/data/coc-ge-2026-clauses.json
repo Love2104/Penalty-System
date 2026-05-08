@@ -1,0 +1,914 @@
+[
+  {
+    "title": "Part III 1",
+    "description": "Adherence to time limits: Any GBM, in general, and candidates, in particular, must strictly adhere to the time limits provided by the EC for any activity.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 2",
+    "description": "Abstinence from the usage of liquor, drugs, tobacco or associated products for election purposes: Any GBM, candidate or otherwise, shall abstain from serving, distributing or accepting liquor, drugs, tobacco or any associated product for canvassing support in favor or against a candidate. Strict action shall be taken against any person found in violation of this rule above and beyond those prescribed by the institute guidelines for usage of the same.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 3",
+    "description": "Anti-campaigning in any form, by any GBM, candidate or otherwise, is strictly prohibited.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 4",
+    "description": "Prohibition on Collusion: Collusion is strictly prohibited. No candidate or their campaigner shall express their support towards or endorse any other candidate. The candidate(s), or their campaigner(s), must not be found in any sort of discussion with any other candidate(s) (or their campaigners) during the duration of the electoral process. Also, any kind of act encouraging Collusion by any GBM/Candidate/Proposer/Seconder/Sympathizer is prohibited.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 5",
+    "description": "Threatening or Influencing any other Candidate or GBM: No GBM/Candidate can influence or threaten any other Candidate/GBM in any way possible, whether done personally or through any other person or any medium. EC will take suo moto cognizance of such acts if found to have happened and it will be dealt with strictly.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 6",
+    "description": "Cooperation with the EC team: All the Candidates are expected to maintain a minimum decorum and level of conduct with the EC team and any GBM. Any kind of misbehavior or non-cooperation with the EC will be dealt with strictly.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 7",
+    "description": "Abstinence from organizing public gatherings",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 7(a)",
+    "description": "Public gatherings may be called/organized during the electoral process only with permission from the EC prior to the event. Any public gatherings, for which permission has not been obtained, shall be counted against the spirit of the elections and proper disciplinary action shall be taken against the organizers.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 7(b)",
+    "description": "Any representative of the EC shall be allowed to visit or attend any public gathering, for which permission has been obtained from the EC.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 7(c)",
+    "description": "Any public gathering, for which permission has been obtained, shall not involve solicitation of votes in favor of or against any candidate.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 7(d)",
+    "description": "The EC may cancel any such permission granted for a public gathering. On cancellation of such permission, the public gathering shall come to an end immediately. Any representative of the EC may enforce such immediate action by the prior permission and discussion with the CEO. The EC shall also provide the reasons for such cancellation to the organising team.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8",
+    "description": "Organizing Gymkhana and Hall Activities",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8(a)",
+    "description": "All Gymkhana and Hall activities shall normally remain suspended during the electoral process. However, activities may be organized during the electoral process after obtaining permission from the EC.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8(b)",
+    "description": "Candidates, proposers, seconders, and campaigners are advised not to attend such activities. However, if they wish to do so, they must inform the EC prior to attending.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8(c)",
+    "description": "Any representative of the EC shall be allowed to visit or attend any such activity, for which permission has been obtained from the EC.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8(d)",
+    "description": "Any such activity, for which permission has been obtained, shall not involve canvassing of support in favor of or against any candidate.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 8(e)",
+    "description": "The EC may cancel any such permission granted for an activity. On cancellation of such permission, the activity shall come to an end immediately. Any representative of the EC may enforce such immediate action.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 9",
+    "description": "Attempt to Encourage Differences: No GBM in general, and candidate, in particular, shall indulge in or abet any activity which may create differences or aggravate existing differences or create mutual hatred or cause tension between any group(s) of students.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 10",
+    "description": "Appeal to Communal sentiments: No GBM in general, and candidate in particular, shall make use of religious, regional, linguistic, communal or caste-based sentiments, identities, groups or institutions to canvass support or solicit votes in favor of or against any candidate.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 11",
+    "description": "Complaint Registration: All complaints shall be made as soon as possible, in writing, by email or via the Complaint Portal developed by EC. Any decision to the complaints shall be taken by the EC.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 12",
+    "description": "Use of External Influence: No GBM in general, and candidate in particular, shall make use of any person or group of persons or institution that is not a part of the General Body to solicit votes in favor of or against any candidate or to influence the elections in any form.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 13",
+    "description": "Relieving Positions of Responsibility: Any candidate, or campaigner, who holds a position of responsibility in the Students' Gymkhana shall be temporarily relieved from their duties so that those responsibilities do not interfere with the electoral procedure.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 14",
+    "description": "Usage of Position of Responsibility: No GBM in general, and candidates in particular, shall use their position of responsibility to canvass support in favor of or against any candidate.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 15",
+    "description": "The Election Commission shall take a decision in case of any dispute connected with the elections before counting commences. The EC may under appropriate circumstances, enforce measures like cancellation of the nomination of a candidate.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 16",
+    "description": "All complaints should be made to the EC before counting commences. Complaints related to the elections shall not be entertained after the counting of votes commences.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 17",
+    "description": "The Election Commission may take appropriate action on any action of a GBM, occurred before and during the enforcement of the CoC, which violates the spirit of the electoral process as outlined by the CoC.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part III 18",
+    "description": "Any election-related activity that is not prescribed by EC is actionable.",
+    "category": "General Conduct",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part IV 1",
+    "description": "Unethical use of Official Position: All Office Bearers shall ensure that no cause is given for any complaint, regarding the use of their official position for the purposes of election campaign.",
+    "category": "Rules related to Office Bearers",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part IV 2",
+    "description": "Any office-bearer cannot support or criticize any candidate, publicly or privately, in their official capacity or otherwise.",
+    "category": "Rules related to Office Bearers",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part IV 3",
+    "description": "The office-bearers shall not enter any polling station or place of counting except in their capacity as a voter or an authorized representative of the EC.",
+    "category": "Rules related to Office Bearers",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Part IV 4",
+    "description": "A Member of the Hall Executive Committee (HEC) or a similar body at the Hall Level, members of the Students' Placement Office. or Position holders of Festivals may become a proposer/seconder/campaigner of a candidate only after temporarily relieving themselves of the respective positions of responsibility for the campaigning period.",
+    "category": "Rules related to Office Bearers",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.1",
+    "description": "Any GBM may file a nomination for a position if they satisfy the Eligibility Criteria for that position (as described under APPENDIX F of the Constitution of the Students' Gymkhana).",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.2",
+    "description": "Every candidate for the post of an Executive shall have to be i. proposed by two GBMs, and ii. seconded by five GBMs while filing their nomination. In addition, the candidate needs to appoint one GBM as their Campaign Manager, who shall also be answerable to the EC on issues related to the moderation and regulation of the campaign of the candidate.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.3",
+    "description": "Every candidate for the post of Senator shall have to be, i. proposed by one GBM, and ii. seconded by two GBMs, while filing their nomination.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.4",
+    "description": "Only a person belonging to the corresponding electorate, as that of a candidate, may propose or second the candidate or be a campaigner or a campaign manager of a candidate.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.5",
+    "description": "The proposer, seconders and campaign managers of a candidate are, by default, considered to be campaigners of the candidate.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.6",
+    "description": "No student can be a campaigner for more than one candidate.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.7",
+    "description": "A candidate cannot propose or second themself or any other candidate contesting the elections for any post.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.8",
+    "description": "A candidate cannot appoint themselves as their own campaign managers.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.9",
+    "description": "Any proposer, seconder, campaign manager, or campaigner must submit their consent to be the same, by the procedure prescribed by the EC.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.10",
+    "description": "Candidates shall be accompanied by their proposers, seconders, and campaign managers during the verification of nomination.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.11",
+    "description": "Candidates and their proposers/seconders/campaign managers/campaigners must present their institute identity cards and submit their consent and any relevant documents, as specified by the EC, at the time of verification of nomination.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.12",
+    "description": "A member of the EC shall not be a campaigner for any candidate or contest elections for any post.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.13",
+    "description": "Request for withdrawal of nomination, if any, shall be made by the candidates, in writing, to the EC, during the period specified by the EC for the same. Any such requests made after the specified deadline would be considered only in case of some very serious reasons.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.14",
+    "description": "The EC shall announce the final list of candidates after the completion of the procedure of re-nominations, if needed.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.15",
+    "description": "A manifesto must be submitted by a candidate, by the procedure specified by the EC, at the time specified by the EC for the same. Blank manifestos shall not be allowed.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 1.16",
+    "description": "Failing to follow any of the above guidelines may lead to the cancellation of the candidature and appropriate disciplinary action.",
+    "category": "Nomination Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 2.1",
+    "description": "Re-nominations shall be called if the number of valid nominations filed for a position is less than the number of positions for which nominations have been called.",
+    "category": "Re-nominations Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 2.2",
+    "description": "All the rules related to the nomination process apply to the renomination process as well.",
+    "category": "Re-nominations Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 2.3",
+    "description": "No nominations shall be filed after the period for re-nominations has ended.",
+    "category": "Re-nominations Process",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.1",
+    "description": "Campaigning or canvassing support for a candidate, before and after the time prescribed by the EC for the same, by any candidates, campaigners, sympathizers or GBM is not permitted.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.2",
+    "description": "All GBMs in general, and candidates in particular, shall be prohibited from indulging or abetting any corrupt practices and offenses, such as bribing of voters, intimidation of voters, use of propaganda and/or campaigning at public restricted places and transport and conveyance/persuasions of voters to and from the polling stations.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.3",
+    "description": "The manifesto, finally approved by the EC, shall be strictly adhered to while campaigning. Deviations from the manifesto are not allowed during campaigning or any other means of campaigning allowed by the EC.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.4",
+    "description": "Criticism of any candidate by any GBM, when made, shall be confined to the manifesto of the candidate or any proven action of the candidate in relation to a position of responsibility held by the candidate.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.5",
+    "description": "A candidate can not use posters, banners or any other tangible means of campaigning, except for the printed copies of the manifestos, verified and authorized by the EC. Any exception to this rule shall be made at the discretion of the EC.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.6",
+    "description": "Campaigning is not allowed in public places like the Messes, Hall Canteens, Reading Rooms, Hall CC, TV Rooms or any other common rooms and areas of the Hall except for when explicitly allowed by the EC.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.7",
+    "description": "No candidate or its campaigners shall be permitted to carry out any processions.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.8",
+    "description": "Candidates may be allowed to organize public meeting(s) according to the rules specified in the CoC.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.9",
+    "description": "A candidate shall refrain from wandering around for election purposes during the blackout period unless explicitly allowed by the CEO.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.10",
+    "description": "Campaigners or sympathizers of one candidate shall not create disturbances at public events organized for another candidate.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.11",
+    "description": "Any form of campaigning other than that allowed by the EC is not permitted.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.12",
+    "description": "A GBM in general, and a candidate in particular, shall not make use of official machinery for campaigning or soliciting votes.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.13",
+    "description": "A candidate or their campaigners shall invariably seek the assistance of the EC for dealing with people disturbing campaigning or otherwise attempting to create disorder. Candidates/campaigners shall not take action against such persons, by themselves.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.14",
+    "description": "The candidate shall give information in advance to the EC of the schedule for campaigning to allow the EC to make the necessary arrangements. The schedule shall contain the time and place of the campaigning and the campaigners accompanying them. Ordinarily, there shall be no deviation from the program.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.15",
+    "description": "Strict disciplinary action may be taken by the EC if it is found that efforts have been made to conceal a campaigner.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.16",
+    "description": "If any campaigner performs any act which violates the rules of the CoC, the candidate, of which the person is a campaigner, shall be equally liable as the person who has violated the CoC. Campaigners are the candidate's responsibility at all times.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.17",
+    "description": "Total number of campaigners for the executive/senator post shall be decided by the EC.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.18",
+    "description": "Any GBM may file complaints in writing to the EC against any candidate(s) not conforming to the norms of the election process.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 3.19",
+    "description": "All proofs related to any election-related complaints should, as far as possible, be submitted to the Election Commission within 48 hours of the occurrence of the event in question. Complaints accompanied by such timely evidence will be given priority during the investigation. However, this provision does not bar the submission of proofs for incidents that occurred earlier, provided that the delay is satisfactorily explained.",
+    "category": "Rules related to Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.1",
+    "description": "Use of Videos and Posters",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.1(a)",
+    "description": "All Candidates can make videos or posters regarding any issues concerning the student body. It is mandatory for the executive candidates to submit videos on time as prescribed by the EC. The video or poster shall have to be approved by the EC and shall be posted only by the EC from its official social media account. The candidate shall take care of the rules governing elections while making such a video or poster.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.1(b)",
+    "description": "A candidate may make videos or posters discussing their manifesto. The video or poster shall have to be approved by the EC and shall be posted only by the EC from its official social media account. The candidate shall take care of the rules governing elections while making such a video or poster.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.1(c)",
+    "description": "The duration of such a video, as mentioned above, shall not exceed 2 minutes. Such a video shall feature only the candidate shall have a plain background and shall not consist of any special effects.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.1(d)",
+    "description": "The video or poster, shall not be aimed at criticizing another candidate or soliciting votes against another candidate.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.2",
+    "description": "The academic area shall be kept free from any kind of campaigning.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.3",
+    "description": "Institute facilities (like institute Emails facility etc.) and hall properties (including any common area of the Hall) shall not be used for campaigning.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.4",
+    "description": "Candidates must only campaign during the campaigning period as specified by the EC.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.5",
+    "description": "A sympathizer or campaigner must not canvass support or solicit votes for a candidate in the absence of that candidate.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.6",
+    "description": "Physical campaigning is allowed only in the Halls of Residence, except for the public meetings allowed by the EC. For all practical purposes, the Halls of Residence shall include any other such residence provided by the institute to any GBM.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.7",
+    "description": "Campaigning shall normally be limited to a wing-to-wing basis, i.e., candidates may address a group of GBM only in a wing of a Hall of Residence. Only the campaigners of the candidate may accompany the candidate for this purpose.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.8",
+    "description": "Any candidate shall not meet with or address a gathering of more than the specified limit of GBMs, in one instance. This limit shall be 60 GBMs in case of a candidate for an Executive post, and 30 GBMs in all other cases; including the campaigners of the candidate in all cases.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.9",
+    "description": "Campaigning shall not be done inside any closed room in general, or a room of a GBM in particular.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.10",
+    "description": "No GBM shall be forced, in any manner, to attend a campaign of a candidate.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.11",
+    "description": "A candidate or their campaigner cannot organize or attend any meeting at any common room or common area of a Hall of Residence or any place outside the Halls of Residence unless explicitly permitted by the EC. A meeting for this purpose shall be considered to be a gathering of four or more people.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.12",
+    "description": "Any GBM, other than a campaigner, cannot campaign for a candidate. This also means that a sympathizer of a candidate cannot campaign for the candidate.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.13",
+    "description": "The EC must be fully informed of the instruments of campaigning used by a candidate. This includes any publicly distributed copies of the manifesto, candidate and campaigner ID cards issued by the EC, etc. Samples of these must be given to the EC and consent must be taken before any such material is distributed. Any document used for campaigning must be duly stamped by the Election Commission before distribution.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.14",
+    "description": "An instrument of campaigning that is not stamped by the EC, must not be used for campaigning.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.15",
+    "description": "All instruments of campaigning shall be considered a property of the EC and after the campaigning period ends, all the instruments of campaigning shall be submitted to the EC without fail. Failure to do so may lead to appropriate action against the candidate.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.16",
+    "description": "A candidate and campaigner shall wear their ID cards, issued by EC, at all times while campaigning.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.17",
+    "description": "The use of loudspeakers, vehicles, and animals for the purpose of canvassing is prohibited.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.18",
+    "description": "Conduct on Social Media",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.18(a)",
+    "description": "Campaigning/anti-campaigning shall not be done on any social media platform except through means authorized by the EC.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.18(b)",
+    "description": "All GBMs shall abide by the rules of the CoC, in general, in their activity on social media.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.18(c)",
+    "description": "No Candidate or any GBM, in general, should be involved directly or indirectly by forcing others to campaign/anti-campaign for anyone in any way.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.19",
+    "description": "The EC may relax these rules at its own discretion if it deems it necessary to do so.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 4.20",
+    "description": "Publicizing any candidate by the use of any means not authorized and approved by EC is not allowed.",
+    "category": "Rules for Campaigning",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1",
+    "description": "Public Meetings",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(a)",
+    "description": "Only one public meeting can be organized by a candidate in the OAT, New SAC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(b)",
+    "description": "Only the candidates contesting the elections to an Executive Post are allowed to organize such a meeting.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(c)",
+    "description": "The candidate organizing the meeting shall be responsible for its conduct.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(d)",
+    "description": "All logistics related to such a meeting are to be borne by the candidate and shall be included in their total election expenses.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(e)",
+    "description": "The maximum duration of such a meeting is one hour.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(f)",
+    "description": "The timings of such a meeting shall be informed to the EC at least 24 hours in advance. Failing to do so, the meeting shall not be allowed to commence.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(g)",
+    "description": "There shall be no constraints on the number of people attending such a meeting.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(h)",
+    "description": "The meeting shall be utilized to discuss the manifesto of a candidate or any other issues faced or questions posed by any GBM.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.1(i)",
+    "description": "All the relevant rules pertaining to organizing public gatherings as specified in Point 5 of Part III shall apply here.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2",
+    "description": "SOAP BOX",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2(a)",
+    "description": "SOAP BOX shall be organized by the EC where the candidates shall discuss their manifestos and address questions from the audience.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2(b)",
+    "description": "SOAP BOX shall be organized for all of the positions for which nominations are accepted.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2(c)",
+    "description": "The SOAP BOX may be organized at multiple locations and shall be open to the General Body.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2(d)",
+    "description": "SOAP BOX shall be moderated by one or more students relevant to the post, as decided by the EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.2(e)",
+    "description": "It shall be mandatory for all candidates to be present for the complete duration of the SOAPBOX. Failure to attend the SOAPBOX without prior intimation and valid justification, as determined by the Election Commission, shall be considered a violation of the Code of Conduct and may result in disciplinary action, including but not limited to deduction of campaigning hours or other penalties as deemed appropriate by the EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3",
+    "description": "Executive Dialogue And Debate",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(a)",
+    "description": "Executive Dialogue And Debate (EDAD hereafter) shall be organized by the EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(b)",
+    "description": "EDAD shall be organized only for the candidates contesting the elections for an Executive post.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(c)",
+    "description": "EDAD shall be moderated by one or more students with prior experience relevant to the post, as decided by the EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(d)",
+    "description": "One EDAD shall be organized for each Executive post and all candidates contesting for that post must participate in it.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(e)",
+    "description": "An EDAD shall consist of two parts: i. Executive Dialogue: In this, the moderator shall ask questions to the candidate in relation to their manifestos. ii. Executive Debate: In this, the candidates shall be allowed to ask questions to other candidates in relation to their manifestos, moderated by the appointed moderator(s).",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(f)",
+    "description": "All EDAD shall be live-streamed online from the social media page of EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 5.3(g)",
+    "description": "It shall be mandatory for all candidates contesting for Executive positions to be present for the complete duration of the Executive Dialogue and Debate (EDAD). Failure to attend the EDAD without prior intimation and valid justification, as determined by the Election Commission, shall be considered a violation of the Code of Conduct and may result in disciplinary action, including but not limited to deduction of campaigning hours or other penalties as deemed appropriate by the EC.",
+    "category": "Rules Governing Public meetings, SOAP Box, and Executive Dialogue",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 6.1",
+    "description": "If a GBM is absent from the campus on the polling day, they may cast their vote by envelope voting during the period prescribed by EC.",
+    "category": "Rules for Envelope Voting",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 6.2",
+    "description": "Only Closed Ballots could be cast in the Envelope Voting.",
+    "category": "Rules for Envelope Voting",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 6.3",
+    "description": "No member of the electorate who casts an envelope vote shall be found present near the polling booths on the day of regular polling.",
+    "category": "Rules for Envelope Voting",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 6.4",
+    "description": "Envelope voting shall be permitted according to the timings announced by the EC. The EC shall inform the detailed procedure prior to the scheduled start of the envelope voting period. The votes shall be cast in a closed ballot form for the same.",
+    "category": "Rules for Envelope Voting",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.1",
+    "description": "The Election Commission may avail the services of as many student volunteers as required for organizing the polling process. All such volunteers must be considered members of the EC for all cases of violation of the CoC.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.2",
+    "description": "A list of voters shall be available with the EC at the time of polling.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.3",
+    "description": "All candidates shall cooperate with the members of the EC on election duty to ensure peaceful and orderly polling and complete freedom for the voters to exercise their franchise without being subjected to any annoyance or obstruction.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.4",
+    "description": "All candidates contesting for Executive Positions are required to report to the Senate Hall at the commencement of the polling period. Non-compliance with this requirement shall be treated as a violation of the Code of Conduct and may affect their candidature.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.5",
+    "description": "All candidates must submit laptops to the Election Commission one day before polling to ensure a smooth and fair election process.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.6",
+    "description": "Voters may cast their votes at the polling station during the prescribed hours. The list of polling stations corresponding to each hall of residence and other residential premises shall be mailed to the General Body.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.7",
+    "description": "One or more members of the Election Commission shall be present at the polling station as the polling officer(s). During the polling operations, if a situation requires, the polling officer shall take a procedural decision after informing the EC.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.8",
+    "description": "No one, except the voters, members of the EC, and any security personnel appointed by the EC shall enter the polling stations. Once voters have voted, they are not allowed to be present in the vicinity of the polling booth.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.9",
+    "description": "There may be poll observers, appointed by the EC, to whom any complaints regarding elections may be reported or submitted. Complaints may also be reported to any member of the EC. Poll observers shall be treated as members of the EC for all cases of violation of the CoC.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.10",
+    "description": "Any complaints reported to any poll observer or member of the EC shall be formally brought to the notice of the EC. Any attempt to hide any complaints or obstruct their conveyance to the EC is punishable.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.11",
+    "description": "After the polling, the instruments used for polling shall be placed in the custody of the Chief Election Officer under the supervision of a representative of the Grievances Redressal Committee.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.12",
+    "description": "The Chief Election Officer shall invite one representative of the candidate as an observer for the counting. The Grievances Redressal Committee shall be invited to supervise the counting.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.13",
+    "description": "The Chief Election Officer shall then declare the results after the counting is over.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.14",
+    "description": "In the case of a tie, a lottery shall be used as a tie-breaker. The lottery shall be done in the presence of all the candidates who are tied. Rules of the lottery shall be discussed with the above candidates and the lottery shall proceed with their consent on the rules of the lottery.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix I Section 7.15",
+    "description": "Results shall be declared in accordance with the Constitutional provisions. The EC is accountable to the Students' Senate in this regard.",
+    "category": "Voting Guidelines",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.1",
+    "description": "The EC may summon any GBM if the EC feels that the GBM's views are important in relation to the case of violation of the CoC before the EC.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.2",
+    "description": "On any such summon the GBM shall appear before the EC as soon as possible.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.3",
+    "description": "The EC may ask a GBM to appear before the EC immediately if the EC deems it necessary under special circumstances.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.4",
+    "description": "If the GBM is unable to appear before the EC, they shall inform the EC about the same, with appropriate proof of the reason for their absence, as soon as possible. In case of any ambiguity, the genuineness of the case shall be decided upon by the EC. If no genuine reason is found, the EC may take appropriate action against the GBM.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.5",
+    "description": "The EC shall specify the procedure of testimony, interrogation, and discussion of charges and conduct during the process.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.6",
+    "description": "The EC may assign a representative of the EC to take testimony, interrogate, and discuss charges with a GBM. In any such situation, the GBM shall cooperate with the representative.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 1.7",
+    "description": "Fake testimony including but not limited to misleading shall be taken seriously by EC and suo moto recognition will be taken by the CEO as per the case.",
+    "category": "Rules of Testimony, Interrogation, and Discussion of Charges",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.1",
+    "description": "The election commission may make independent decisions in case of any dispute related to the election. This decision is final and may be challenged only by filing an appeal with the Grievances Redressal Committee.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.2",
+    "description": "If any of the students are involved in the violation of the CoC then the following action may be taken against them.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.2(a)",
+    "description": "For Candidates The Penalty on candidates shall mainly consist of a deduction in the campaigning period of the candidate. Such a deduction shall be made in reverse order starting from 11 pm in 6 hrs slot. i. Level 0: Deduction of 3hrs in campaigning period ii. Level 1: Deduction of 6 hrs in campaigning period and/or Fine up to INR iii. Level 2: Deduction of 12 hrs in campaigning period and/or Fine up to INR iv. Level 3: Deduction of 24 hrs in campaigning period and/or Fine up to INR v. Level 4: Cancellation of nomination. (may only be decided by the CEO in consultation with the managers of EC) vi. Level 5: Case reported to AGRC and for further consideration over reporting to SSAC (based on severity of the case) vii. Level 6: Cancellation of nomination and case reported to SSAC and/or concerned higher authority, as recommended by the AGRC.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.2(b)",
+    "description": "For General Body Members i. Level 0: Warning issued ii. Level 1: Fine up to INR iii. Level 2: Fine up to INR iv. Level 3: Fine up to INR v. Level 4: Case reported to AGRC and for further consideration over reporting to SSAC (based on severity of the case). vi. Level 5: Case reported to SSAC and/or concerned higher authority as applicable for disciplinary action, as recommended by the AGRC.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.2(c)",
+    "description": "For Office Bearers of Students' Gymkhana and Students' Senate, Members of the Hall Executive Committee (HEC) or a similar body at the Hall Level, Members of the Election Commission, Members of the Counseling Service, Students' Placement Office, and any other position of responsibility holders/office bearers i. Level 1: Fine up to INR ii. Level 2: Fine up to INR iii. Level 3: Case reported to AGRC and for further consideration over reporting to SSAC (based on severity of the case). iv. Level 4: Case reported to SSAC and/or the concerned higher authority as applicable, as recommended by the AGRC.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  },
+  {
+    "title": "Appendix II Section 2.3",
+    "description": "General Guidelines for the imposition of penalty ? Repetition of violations may result in increased severity of action against the perpetrators. ? The level of penalty on an offense depends on the seriousness of the offense, the intent behind the offense, and previous infractions. ? The circumstances for the imposition of a fine shall be disclosed only on the floor of the Students' Senate, if solicited, and to the GRC if solicited. ? The penalty need not be imposed in the order mentioned above i.e. it may be imposed in any order, at the discretion of the EC. The same level of penalty may be imposed on a person more than once.",
+    "category": "Penalty for Violation of Rules",
+    "severity_hint": "COC GE 2026"
+  }
+]

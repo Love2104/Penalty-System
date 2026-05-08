@@ -1,31 +1,41 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-interface User {
+export interface AuthUser {
   id: string;
   email: string;
   role: string;
 }
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   token: string | null;
-  setAuth: (user: User, token: string) => void;
+  hasHydrated: boolean;
+  setAuth: (user: AuthUser, token: string) => void;
   logout: () => void;
+  markHydrated: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  setAuth: (user, token) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token);
-    }
-    set({ user, token });
-  },
-  logout: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-    }
-    set({ user: null, token: null });
-  },
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      hasHydrated: false,
+      setAuth: (user, token) => set({ user, token }),
+      logout: () => set({ user: null, token: null }),
+      markHydrated: () => set({ hasHydrated: true }),
+    }),
+    {
+      name: 'penalty-system-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.markHydrated();
+      },
+    },
+  ),
+);
