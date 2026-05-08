@@ -244,7 +244,6 @@ const sendPenaltyDispatchEmails = async (sheet: { name: string; rows: any[] }) =
       subject: emailContent.subject,
       html: emailContent.html,
       text: emailContent.text,
-      templateType: 'penalty',
     });
     sentTo.push(email);
   }
@@ -297,7 +296,6 @@ const resendPenaltyEmailForStudent = async (sheet: { name: string }, rows: any[]
     subject: emailContent.subject,
     html: emailContent.html,
     text: emailContent.text,
-    templateType: 'penalty',
   });
 
   return {
