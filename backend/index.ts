@@ -4,7 +4,6 @@ dotenv.config();
 import cors from 'cors';
 import express from 'express';
 import authRoutes from './src/routes/auth.routes';
-import { getFirebaseAdminStatus } from './src/lib/firebaseAdmin';
 import roleRoutes from './src/routes/role.routes';
 import sheetRoutes from './src/routes/sheet.routes';
 import studentRoutes from './src/routes/student.routes';
@@ -51,7 +50,6 @@ app.use('/api/sheets', sheetRoutes);
 app.get('/api/health', async (_req, res) => {
   const google = await getGoogleIntegrationStatus();
   const mailer = getMailerConfigStatus();
-  const firebaseAuth = getFirebaseAdminStatus();
 
   res.json({
     status: 'OK',
@@ -64,7 +62,10 @@ app.get('/api/health', async (_req, res) => {
         ready: mailer.ready,
         missing: mailer.missing,
       },
-      firebaseAuth,
+      auth: {
+        method: 'email-otp',
+        smtpProvider: 'brevo',
+      },
       googleSheets: {
         ready: google.ready,
         source: google.source,

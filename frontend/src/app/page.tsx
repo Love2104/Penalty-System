@@ -3,21 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, KeyRound, Link2, Loader2, Mail, ShieldCheck, Sparkles } from 'lucide-react';
-import { sendSignInLinkToEmail } from 'firebase/auth';
+import { ArrowLeft, KeyRound, Loader2, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 import api from '@/lib/api';
-import {
-  ensureFirebaseAuthPersistence,
-  firebaseEmailLinkDomain,
-  getFirebaseEmailLinkUrl,
-  isFirebaseEmailLinkConfigured,
-} from '@/lib/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const EMAIL_LINK_STORAGE_KEY = 'penalty-system-email-link';
-
-type AuthMethod = 'firebase-link' | 'email-otp';
 type OtpStage = 'email' | 'otp';
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -41,11 +31,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  // Auto-select Firebase if configured; otherwise fall back to OTP
-  const [authMethod, setAuthMethod] = useState<AuthMethod>(
-    isFirebaseEmailLinkConfigured ? 'firebase-link' : 'email-otp',
-  );
   const [otpStage, setOtpStage] = useState<OtpStage>('email');
 
   useEffect(() => {
@@ -57,41 +42,6 @@ export default function LoginPage() {
   const clearFeedback = () => {
     setError('');
     setMessage('');
-  };
-
-  /* ───── Firebase Email Link flow ───── */
-  const requestEmailLink = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    clearFeedback();
-
-    try {
-      if (!isFirebaseEmailLinkConfigured) {
-        throw new Error('Firebase Email Link Auth is not configured in the frontend environment.');
-      }
-
-      // Backend pre-checks that the email is authorized
-      const response = await api.post<{ message: string; email: string }>(
-        '/auth/email-link/request',
-        { email },
-      );
-      const auth = await ensureFirebaseAuthPersistence();
-
-      const actionCodeSettings = {
-        url: getFirebaseEmailLinkUrl(),
-        handleCodeInApp: true,
-        ...(firebaseEmailLinkDomain ? { linkDomain: firebaseEmailLinkDomain } : {}),
-      };
-
-      await sendSignInLinkToEmail(auth, response.data.email, actionCodeSettings);
-      window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, response.data.email);
-      setEmail(response.data.email);
-      setMessage('Check your inbox and open the secure sign-in link on this device to continue.');
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Failed to send sign-in link.'));
-    } finally {
-      setLoading(false);
-    }
   };
 
   /* ───── Backend Email OTP flow ───── */
@@ -138,32 +88,19 @@ export default function LoginPage() {
     clearFeedback();
   };
 
-  const switchMethod = (method: AuthMethod) => {
-    setAuthMethod(method);
-    setOtpStage('email');
-    setOtp('');
-    clearFeedback();
-  };
-
-  /* ───── Method descriptions ───── */
+  /* ───── Descriptions ───── */
   const headingText =
-    authMethod === 'firebase-link'
-      ? 'Sign in via email link'
-      : otpStage === 'email'
-        ? 'Sign in with OTP'
-        : 'Verify your OTP';
+    otpStage === 'email'
+      ? 'Sign in with OTP'
+      : 'Verify your OTP';
 
   const subText =
-    authMethod === 'firebase-link'
-      ? 'Use your authorized institute email to receive a secure Firebase sign-in link.'
-      : otpStage === 'email'
-        ? 'Enter your authorized institute email to receive a 6-digit OTP.'
-        : `We sent a 6-digit OTP to ${email}. Enter it below to sign in.`;
+    otpStage === 'email'
+      ? 'Enter your authorized institute email to receive a 6-digit OTP.'
+      : `We sent a 6-digit OTP to ${email}. Enter it below to sign in.`;
 
   const footerText =
-    authMethod === 'firebase-link'
-      ? 'Firebase sends the secure link, then the backend verifies your approved role and issues the app session after the link is opened.'
-      : 'A 6-digit OTP is sent to your email. After verification, the backend issues a secure JWT session token for your approved role.';
+    'A 6-digit OTP is sent to your email via Brevo. After verification, the backend issues a secure JWT session token for your approved role.';
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
@@ -185,9 +122,9 @@ export default function LoginPage() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {[
-                ['Secure access', 'Firebase Email Link or Email OTP for approved EC accounts only.'],
+                ['Secure access', 'Email OTP verification via Brevo for approved EC accounts only.'],
                 ['Review workflow', 'From draft to dispatch with clearer status control.'],
-                ['Deployment-ready', 'Prepared for Firebase frontend and Render backend rollout.'],
+                ['Deployment-ready', 'Prepared for Firebase frontend hosting and Render backend rollout.'],
               ].map(([title, copy]) => (
                 <div key={title} className="panel-soft p-5">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
@@ -207,34 +144,6 @@ export default function LoginPage() {
             <p className="eyebrow text-amber-300 dark:text-amber-700">Member Access</p>
             <h2 className="mt-3 font-display text-3xl font-bold">{headingText}</h2>
             <p className="mt-2 text-sm text-slate-300 dark:text-slate-600">{subText}</p>
-          </div>
-
-          {/* ─── Method Toggle ─── */}
-          <div className="mt-5 flex gap-2 rounded-2xl border border-[var(--line)] bg-white/55 p-1.5 dark:bg-white/5">
-            <button
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                authMethod === 'firebase-link'
-                  ? 'bg-slate-950 text-white shadow-lg dark:bg-white dark:text-slate-950'
-                  : 'text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)]'
-              }`}
-              onClick={() => switchMethod('firebase-link')}
-              type="button"
-            >
-              <Link2 className="h-4 w-4" />
-              Firebase Link
-            </button>
-            <button
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                authMethod === 'email-otp'
-                  ? 'bg-slate-950 text-white shadow-lg dark:bg-white dark:text-slate-950'
-                  : 'text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)]'
-              }`}
-              onClick={() => switchMethod('email-otp')}
-              type="button"
-            >
-              <KeyRound className="h-4 w-4" />
-              Email OTP
-            </button>
           </div>
 
           {/* ─── Feedback ─── */}
@@ -257,37 +166,7 @@ export default function LoginPage() {
 
           {/* ─── Forms ─── */}
           <AnimatePresence mode="wait">
-            {authMethod === 'firebase-link' ? (
-              /* Firebase Email Link form */
-              <motion.form
-                key="firebase-form"
-                animate={{ opacity: 1, x: 0 }}
-                className="mt-6 space-y-5"
-                exit={{ opacity: 0, x: -20 }}
-                initial={{ opacity: 0, x: 20 }}
-                onSubmit={requestEmailLink}
-              >
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">Institute email</label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
-                    <input
-                      className="field pl-11"
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="name@iitk.ac.in"
-                      required
-                      type="email"
-                      value={email}
-                    />
-                  </div>
-                </div>
-
-                <button className="button-primary w-full" disabled={loading} type="submit">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  Send sign-in link
-                </button>
-              </motion.form>
-            ) : otpStage === 'email' ? (
+            {otpStage === 'email' ? (
               /* OTP - Step 1: Enter email */
               <motion.form
                 key="otp-email-form"

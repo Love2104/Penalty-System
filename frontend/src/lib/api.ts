@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { signOutFromFirebaseClient } from '@/lib/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const DEFAULT_API_URL = 'http://localhost:5000/api';
@@ -24,7 +23,6 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
-      void signOutFromFirebaseClient();
     }
 
     return Promise.reject(error);
