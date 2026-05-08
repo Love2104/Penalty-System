@@ -114,7 +114,6 @@ export const login = async (req: Request, res: Response) => {
         </div>
       `,
       text: `Your OTP for the EC Penalty System is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-      templateType: 'otp',
     });
 
     return res.json({ message: 'OTP sent successfully. Please check your email.' });

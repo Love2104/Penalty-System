@@ -64,7 +64,7 @@ app.get('/api/health', async (_req, res) => {
       },
       auth: {
         method: 'email-otp',
-        smtpProvider: 'brevo',
+        smtpProvider: 'gmail',
       },
       googleSheets: {
         ready: google.ready,
