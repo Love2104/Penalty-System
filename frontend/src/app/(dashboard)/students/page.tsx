@@ -136,6 +136,16 @@ export default function StudentsPage() {
     [hall, program, query],
   );
 
+  const directoryIsEmpty =
+    !loading &&
+    !loadingFilters &&
+    meta.total === 0 &&
+    !query &&
+    !hall &&
+    !program &&
+    filters.halls.length === 0 &&
+    filters.programs.length === 0;
+
   return (
     <div className="space-y-5">
       <section className="grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">
@@ -290,8 +300,14 @@ export default function StudentsPage() {
           </div>
         ) : !students.length ? (
           <div className="px-6 py-14 text-center">
-            <p className="text-lg font-semibold">No matching students</p>
-            <p className="mt-2 text-sm muted">Try broadening the search or clearing filters.</p>
+            <p className="text-lg font-semibold">
+              {directoryIsEmpty ? 'No student records imported yet' : 'No matching students'}
+            </p>
+            <p className="mt-2 text-sm muted">
+              {directoryIsEmpty
+                ? 'The search is working, but the student directory database is still empty. Import the student dataset first, then search will start showing records here.'
+                : 'Try broadening the search or clearing filters.'}
+            </p>
           </div>
         ) : (
           <>
