@@ -104,6 +104,7 @@ async function main() {
       try {
         await prisma.student.createMany({
           data: chunk,
+          skipDuplicates: true,
         });
         count += chunk.length;
         console.log(`Seeded ${count}/${students.length} students...`);
