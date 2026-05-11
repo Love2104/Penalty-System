@@ -1,93 +1,83 @@
 # Election Commission Penalty System - Backend
 
-This is the backend service for the Election Commission Penalty Management System for IIT Kanpur. It provides secure RESTful APIs to manage students, authentications, and penalty sheets.
+This backend powers the IITK Election Commission penalty system. It exposes REST APIs for student search, sheet workflows, role intelligence, and phone-OTP-based authentication.
 
 ## Tech Stack
 * **Runtime:** Node.js
 * **Framework:** Express with TypeScript
-* **Database:** PostgreSQL (Prisma ORM), tested for Neon/serverless Postgres deployments
-* **Authentication:** JWT & OTP-based verification
-* **Validation:** JWT Middlewares & Role-based Access Control
-
-## Prerequisites
-* Node.js (v18+)
-* npm
+* **Database:** PostgreSQL with Prisma
+* **Authentication:** Firebase Phone Auth on the frontend, Firebase Admin token verification on the backend, then app JWT issuance
+* **Authorization:** JWT middleware plus role checks (`ADMIN`, `SUPERADMIN`)
 
 ## Installation & Setup
 
-1. **Install dependencies:**
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Environment Variables:**
-   Create `backend/.env` from [`backend/.env.sample`](./.env.sample):
+2. Create `backend/.env` from [`backend/.env.sample`](./.env.sample) and fill in the important values:
    ```env
    DATABASE_URL="postgresql://admin:password@localhost:5432/penalty_system?schema=public"
    DIRECT_URL="postgresql://admin:password@localhost:5432/penalty_system?schema=public"
    JWT_SECRET="replace-with-a-long-random-secret"
    JWT_EXPIRES_IN="7d"
-   SUPERADMIN_EMAIL="superadmin@iitk.ac.in"
-   SMTP_HOST="smtp.resend.com"
-   SMTP_PORT=465
-   SMTP_SECURE=true
-   SMTP_USER="resend"
-   SMTP_PASS="re_xxxxxxxxxxxxxxxxx"
+   SUPERADMIN_PHONE="+919876543210"
    FRONTEND_URL="http://localhost:3000"
-   PORT=5000
+   CORS_ORIGINS="http://localhost:3000"
+   FIREBASE_PROJECT_ID="your-firebase-project-id"
+   FIREBASE_AUTH_SERVICE_ACCOUNT="./secrets/firebase-service-account.json"
    GOOGLE_APPLICATION_CREDENTIALS="./secrets/google-service-account.json"
-   STUDENT_SEED_PATH="C:/path/to/students.json"
    ```
 
-   `SUPERADMIN_EMAIL` is now env-driven on purpose. The seed command will fail if you do not set it.
-
-   If you use Neon in production, keep the pooled connection string in `DATABASE_URL` and the non-pooled direct connection string in `DIRECT_URL`. Prisma recommends a direct connection for CLI tasks such as schema pushes and migrations when your runtime uses a pooler.
-
-   For Google Sheets access, keep the service-account JSON file local and out of Git. The backend supports either of these options:
-   - Set `GOOGLE_APPLICATION_CREDENTIALS` to a local JSON file path such as `./secrets/google-service-account.json`
-   - Set `GOOGLE_SERVICE_ACCOUNT_JSON` to the full JSON string in the environment
-
-   Setup details for both backend and frontend env files, plus the Google credential download flow, are documented in [`../ENVIRONMENT_SETUP.md`](../ENVIRONMENT_SETUP.md).
-
-3. **Database Configuration:**
-   Start PostgreSQL locally, or point your env file at Neon, then push the Prisma schema and generate the client:
+3. Push the Prisma schema and generate the client:
    ```bash
    npx prisma db push
    npx prisma generate
    ```
 
-4. **Seed Initial Data:**
-   Seed the database with default clauses, the superadmin account from env, and optionally the student dataset if `STUDENT_SEED_PATH` is configured:
+4. Seed the database. This creates the superadmin user from `SUPERADMIN_PHONE`, seeds clause data, and optionally imports students if `STUDENT_SEED_PATH` is set:
    ```bash
    npx prisma db seed
    ```
 
-## Running the Server
+5. Start the backend:
+   ```bash
+   npm run dev
+   ```
 
-**Development Mode:**
-```bash
-npm run dev
-```
-The server will start on `http://localhost:5000` with `nodemon` for auto-restarting on changes.
+Full cross-project setup is documented in [ENVIRONMENT_SETUP.md](../ENVIRONMENT_SETUP.md).
 
----
+## Phone OTP Flow
+
+1. The frontend uses Firebase Web Phone Auth and `signInWithPhoneNumber`.
+2. Firebase verifies the OTP and returns a Firebase ID token.
+3. The frontend sends that ID token to `POST /api/auth/firebase-phone-login`.
+4. The backend verifies the Firebase token with Firebase Admin.
+5. The backend looks up the approved user by phone number in the database and issues the app JWT.
+
+Only mobile numbers already registered in the `User` table are allowed to enter the system.
 
 ## Important API Routes
 
-All routes (except `/auth/*`) require a valid JWT token passed in the `Authorization: Bearer <token>` header.
-
 ### Authentication
-* `POST /api/auth/login` - Request an OTP for a valid email (e.g., `@iitk.ac.in`).
-* `POST /api/auth/verify-otp` - Verify the OTP and receive a JWT token.
+* `POST /api/auth/firebase-phone-login` - Verify a Firebase phone-auth ID token and receive the app JWT.
+* `POST /api/auth/register` - Superadmin-only route to register an approved mobile number for `ADMIN` or `SUPERADMIN`.
+* `GET /api/auth/users` - Superadmin-only list of privileged users.
 
 ### Students
-* `GET /api/students/search` - Advanced search for students.
-  * **Query Params:** `q` (search term), `page`, `limit`, `roll`, `name`, `dept`, `hall`, `program`, `gender`, `blood_group`.
+* `GET /api/students/search` - Search students with filters and pagination.
 
 ### Sheets
-* `POST /api/sheets` - Create a new penalty sheet (Requires Auth).
-* `GET /api/sheets` - Get all sheets.
-* `GET /api/sheets/:id` - Get specific sheet details (including rows).
-* `POST /api/sheets/:id/rows` - Add a student penalty row to a DRAFT sheet.
-* `DELETE /api/sheets/:id/rows/:rowId` - Remove a row from a sheet.
-* `POST /api/sheets/:id/status` - Change the status of a sheet (e.g., `DRAFT` -> `UNDER_REVIEW`). Superadmins can approve and send.
+* `GET /api/sheets` - List sheets.
+* `POST /api/sheets` - Create a sheet.
+* `GET /api/sheets/:id` - Get a sheet with rows and review history.
+* `POST /api/sheets/:id/rows` - Add a penalty row.
+* `DELETE /api/sheets/:id/rows/:rowId` - Remove a penalty row.
+* `POST /api/sheets/:id/status` - Move a sheet through the workflow and send emails when dispatching.
+
+## Notes
+
+* Real phone OTP delivery depends on your Firebase phone-auth billing/quota setup.
+* Firebase fictional phone numbers are the easiest zero-cost way to test locally.
+* Keep Firebase service-account JSON and Google service-account JSON out of Git.

@@ -3,11 +3,13 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Loader2, ShieldCheck, UploadCloud, Users2 } from 'lucide-react';
 import api from '@/lib/api';
+import { formatIndianPhone } from '@/lib/phone';
 import { useAuthStore } from '@/store/useAuthStore';
 
 interface UserRecord {
   id: string;
   email: string;
+  phone: string | null;
   role: string;
   is_verified: boolean;
   created_at: string;
@@ -36,7 +38,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 
 export default function AdminPage() {
   const { user } = useAuthStore();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState('ADMIN');
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -96,7 +98,7 @@ export default function AdminPage() {
 
   const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email) {
+    if (!phone) {
       return;
     }
 
@@ -104,9 +106,9 @@ export default function AdminPage() {
     setMessage(null);
 
     try {
-      await api.post('/auth/register', { email, role });
-      setMessage({ type: 'success', text: 'Admin registered successfully.' });
-      setEmail('');
+      await api.post('/auth/register', { phone, role });
+      setMessage({ type: 'success', text: 'Mobile access registered successfully.' });
+      setPhone('');
       await refreshUsers();
     } catch (error) {
       setMessage({ type: 'error', text: getErrorMessage(error, 'Unable to register this user.') });
@@ -180,21 +182,31 @@ export default function AdminPage() {
             </div>
             <div>
               <p className="text-lg font-semibold">Register a new admin</p>
-              <p className="text-sm muted">Grant portal access to an approved email address.</p>
+              <p className="text-sm muted">Grant portal access to an approved mobile number.</p>
             </div>
           </div>
 
           <form className="mt-6 space-y-4" onSubmit={handleRegister}>
             <div>
-              <label className="mb-2 block text-sm font-semibold">Email address</label>
-              <input
-                className="field"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="admin@iitk.ac.in"
-                required
-                type="email"
-                value={email}
-              />
+              <label className="mb-2 block text-sm font-semibold">Mobile number</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[color:var(--foreground-soft)]">
+                  +91
+                </span>
+                <input
+                  className="field pl-14"
+                  inputMode="numeric"
+                  maxLength={10}
+                  onChange={(event) => setPhone(event.target.value.replace(/\D/g, ''))}
+                  placeholder="9876543210"
+                  required
+                  type="tel"
+                  value={phone}
+                />
+              </div>
+              <p className="mt-2 text-xs muted">
+                The backend stores this as <span className="font-mono">+919876543210</span>.
+              </p>
             </div>
 
             <div>
@@ -205,7 +217,7 @@ export default function AdminPage() {
               </select>
             </div>
 
-            <button className="button-primary w-full" disabled={loading || !email} type="submit">
+            <button className="button-primary w-full" disabled={loading || phone.length !== 10} type="submit">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users2 className="h-4 w-4" />}
               Register user
             </button>
@@ -233,6 +245,7 @@ export default function AdminPage() {
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-[var(--line)] bg-white/50 dark:bg-white/5">
                   <tr className="text-xs uppercase tracking-[0.18em] text-[color:var(--foreground-soft)]">
+                    <th className="px-6 py-4 font-semibold">Mobile</th>
                     <th className="px-6 py-4 font-semibold">Email</th>
                     <th className="px-6 py-4 font-semibold">Role</th>
                     <th className="px-6 py-4 font-semibold">Verified</th>
@@ -242,7 +255,12 @@ export default function AdminPage() {
                 <tbody>
                   {users.map((record) => (
                     <tr key={record.id} className="border-b border-[var(--line)] last:border-b-0">
-                      <td className="px-6 py-4">{record.email}</td>
+                      <td className="px-6 py-4">
+                        {record.phone ? formatIndianPhone(record.phone) : 'Not set'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {record.email.endsWith('@phone.local') ? 'Auto-generated' : record.email}
+                      </td>
                       <td className="px-6 py-4">
                         <span
                           className={`status-pill ${
@@ -260,7 +278,7 @@ export default function AdminPage() {
                   ))}
                   {!users.length && (
                     <tr>
-                      <td className="px-6 py-10 text-center text-sm muted" colSpan={4}>
+                      <td className="px-6 py-10 text-center text-sm muted" colSpan={5}>
                         No privileged users found.
                       </td>
                     </tr>

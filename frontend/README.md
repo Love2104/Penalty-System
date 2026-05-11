@@ -1,59 +1,61 @@
 # Election Commission Penalty System - Frontend
 
-This is the frontend user interface for the EC Penalty Management System, built to be responsive, secure, and visually premium.
+This is the Next.js frontend for the EC Penalty Management System. The login flow now uses **Firebase Phone OTP** on mobile numbers.
 
 ## Tech Stack
-* **Framework:** Next.js 14 (App Router)
+* **Framework:** Next.js
 * **Language:** TypeScript
-* **Styling:** Tailwind CSS (v4 structure)
+* **Styling:** Tailwind CSS
 * **State Management:** Zustand
 * **Animations:** Framer Motion
-* **Icons:** Lucide React
-* **Data Fetching:** Axios
+* **HTTP Client:** Axios
 
-## Prerequisites
-* Node.js (v18+)
-* npm
+## Setup
 
-## Installation & Setup
-
-1. **Install dependencies:**
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Environment Variables:**
-   Create `frontend/.env.local` from [`frontend/.env.example`](./.env.example):
+2. Create `frontend/.env.local` from `frontend/.env.example`.
+
+3. Add the backend URL and Firebase web config:
    ```env
    NEXT_PUBLIC_API_URL="http://localhost:5000/api"
+   NEXT_PUBLIC_FIREBASE_API_KEY="your-firebase-web-api-key"
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project.firebasestorage.app"
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="1234567890"
+   NEXT_PUBLIC_FIREBASE_APP_ID="1:1234567890:web:abcdef123456"
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-XXXXXXXXXX"
    ```
 
-   Only public client-safe values should live in frontend env files. Google service-account credentials must stay in the backend only.
+4. For free local testing with Firebase fictional phone numbers, also add:
+   ```env
+   NEXT_PUBLIC_FIREBASE_APP_VERIFICATION_DISABLED="true"
+   NEXT_PUBLIC_FIREBASE_TEST_PHONE_NUMBER="+919876543210"
+   NEXT_PUBLIC_FIREBASE_TEST_OTP="123456"
+   ```
 
-3. **Backend Configuration:**
-   Ensure the backend is running on `http://localhost:5000`. The frontend uses Axios configured in `src/lib/api.ts` to route requests to `NEXT_PUBLIC_API_URL`.
+5. Start the frontend:
+   ```bash
+   npm run dev
+   ```
 
-   Full backend/frontend env setup instructions are documented in [`../ENVIRONMENT_SETUP.md`](../ENVIRONMENT_SETUP.md).
+## Login flow
 
-## Running the Application
+1. User enters a mobile number.
+2. Firebase sends or simulates the OTP verification.
+3. The user enters the 6-digit code.
+4. The frontend sends the Firebase ID token to the backend.
+5. The backend verifies the token and returns the app JWT for an approved phone number.
 
-**Development Mode:**
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+## Important notes
 
----
+* Public Firebase web config belongs in the frontend.
+* Firebase Admin credentials belong in the backend only.
+* Fictional phone numbers are the recommended no-cost local testing setup.
+* Real SMS delivery depends on your Firebase phone-auth billing/quota setup.
 
-## Important Routes (Pages)
-
-* **`/` (Login Page)**
-  * The entry point of the app. Handles OTP requests and verification. Unauthenticated users are redirected here.
-* **`/dashboard`**
-  * Overview page showing quick statistics, recent penalty sheets, and analytics. Protected route.
-* **`/students`**
-  * Advanced student database search. Features debounced searching and extensive filtering (by Hall, Department, Program, etc.).
-* **`/sheets`**
-  * List of all penalty sheets in the system. Allows EC members to create new draft sheets.
-* **`/sheets/[id]`**
-  * The core editor interface. EC members can add penalty rows with student auto-complete here. Superadmins use this page to review, reject, approve, and dispatch emails for the sheet.
+See [ENVIRONMENT_SETUP.md](../ENVIRONMENT_SETUP.md) for the full end-to-end setup.

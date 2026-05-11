@@ -15,6 +15,7 @@ datasource db {
 model User {
   id          String   @id @default(uuid())
   email       String   @unique
+  phone       String?  @unique  // Phone number for Firebase Phone Auth (E.164 format, e.g. +917240172161)
   role        String   @default("ADMIN")
   is_verified Boolean  @default(false)
   created_at  DateTime @default(now())
@@ -131,15 +132,7 @@ model Config {
   @@map("configs")
 }
 
-model OtpCode {
-  email      String   @id
-  otp_hash   String
-  expires_at DateTime
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("otp_codes")
-}
+// OtpCode model removed — Firebase Phone Auth handles OTP natively
 
 model RoleMapping {
   id             String   @id @default(uuid())

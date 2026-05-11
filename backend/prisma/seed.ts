@@ -4,13 +4,19 @@ import * as path from 'path';
 
 const prisma = new PrismaClient();
 
-const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const normalizePhone = (value: string): string => {
+  const digits = value.replace(/[\s\-()]/g, '');
+  if (digits.startsWith('+')) return digits;
+  if (/^\d{10}$/.test(digits)) return `+91${digits}`;
+  if (/^91\d{10}$/.test(digits)) return `+${digits}`;
+  return `+${digits}`;
+};
 
-const resolveSuperAdminEmails = () => {
-  const rawValues = [process.env.SUPERADMIN_EMAIL, process.env.SUPERADMIN_EMAILS]
+const resolveSuperAdminPhones = () => {
+  const rawValues = [process.env.SUPERADMIN_PHONE, process.env.SUPERADMIN_PHONES]
     .filter(Boolean)
     .flatMap((value) => value!.split(','))
-    .map(normalizeEmail)
+    .map((v) => normalizePhone(v.trim()))
     .filter(Boolean);
 
   return [...new Set(rawValues)];
@@ -19,28 +25,41 @@ const resolveSuperAdminEmails = () => {
 async function main() {
   console.log('Seeding data...');
 
-  const superAdminEmails = resolveSuperAdminEmails();
-  if (!superAdminEmails.length) {
+  const superAdminPhones = resolveSuperAdminPhones();
+  if (!superAdminPhones.length) {
     throw new Error(
-      'Set SUPERADMIN_EMAIL (or SUPERADMIN_EMAILS) in backend/.env before running the seed command.'
+      'Set SUPERADMIN_PHONE (or SUPERADMIN_PHONES) in backend/.env before running the seed command.'
     );
   }
 
-  for (const superAdminEmail of superAdminEmails) {
-    await prisma.user.upsert({
-      where: { email: superAdminEmail },
-      update: {
-        role: 'SUPERADMIN',
-        is_verified: true,
-      },
-      create: {
-        email: superAdminEmail,
-        role: 'SUPERADMIN',
-        is_verified: true,
-      },
-    });
+  for (const phone of superAdminPhones) {
+    // Generate a placeholder email from the phone number
+    const email = `${phone.replace('+', '')}@phone.local`;
+    
+    // Check if user already exists by phone
+    const existing = await prisma.user.findUnique({ where: { phone } });
+    
+    if (existing) {
+      await prisma.user.update({
+        where: { phone },
+        data: { role: 'SUPERADMIN', is_verified: true },
+      });
+    } else {
+      // Also check if email exists (from old seed) and update it
+      const existingByEmail = await prisma.user.findUnique({ where: { email } });
+      if (existingByEmail) {
+        await prisma.user.update({
+          where: { email },
+          data: { phone, role: 'SUPERADMIN', is_verified: true },
+        });
+      } else {
+        await prisma.user.create({
+          data: { email, phone, role: 'SUPERADMIN', is_verified: true },
+        });
+      }
+    }
   }
-  console.log(`Superadmin user(s) created/updated: ${superAdminEmails.join(', ')}`);
+  console.log(`Superadmin user(s) created/updated: ${superAdminPhones.join(', ')}`);
 
   const clauseSeedPath = path.join(__dirname, 'data', 'coc-ge-2026-clauses.json');
   if (fs.existsSync(clauseSeedPath)) {

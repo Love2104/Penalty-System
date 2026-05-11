@@ -1,48 +1,48 @@
-import crypto from 'crypto';
 import { Request, Response } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import prisma from '../lib/prisma';
-import { sendMail } from '../services/mailer';
+import { getFirebaseAdminAuth } from '../lib/firebaseAdmin';
 
-const OTP_EXPIRY_MINUTES = 5;
-const OTP_RESEND_COOLDOWN_SECONDS = 45;
+/**
+ * Normalise phone to E.164 format.
+ * Accepts:  7240172161 | 917240172161 | +917240172161
+ * Returns:  +917240172161
+ */
+const normalizePhone = (raw: string): string => {
+  const digits = raw.replace(/[\s\-()]/g, '');
 
-const hashOtp = (email: string, otp: string) =>
-  crypto.createHash('sha256').update(`${email.toLowerCase()}::${otp}`).digest('hex');
-
-const safeCompare = (left: string, right: string) => {
-  const leftBuffer = Buffer.from(left, 'utf8');
-  const rightBuffer = Buffer.from(right, 'utf8');
-
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
+  if (digits.startsWith('+')) {
+    return digits;
   }
 
-  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+  // Indian numbers: 10 digits → prepend +91
+  if (/^\d{10}$/.test(digits)) {
+    return `+91${digits}`;
+  }
+
+  // Already has country code (91…)
+  if (/^91\d{10}$/.test(digits)) {
+    return `+${digits}`;
+  }
+
+  return `+${digits}`;
 };
 
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
+const isValidIndianPhoneInput = (raw: string) => /^(?:\+91|91)?[6-9]\d{9}$/.test(raw.replace(/[\s\-()]/g, ''));
 
-const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const isSupportedRole = (value: string) => ['ADMIN', 'SUPERADMIN'].includes(value);
 
-const canRequestOtp = (createdAt: Date) => {
-  const cooldownEnds = createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000;
-  return Date.now() >= cooldownEnds;
-};
+const findUserByPhone = async (phone: string) =>
+  prisma.user.findUnique({ where: { phone } });
 
-const isAllowedEmail = (email: string) =>
-  email.endsWith('@iitk.ac.in') || email.endsWith('@gmail.com');
-
-const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
-
-const issueJwtForUser = (user: { id: string; email: string; role: string }) => {
+const issueJwtForUser = (user: { id: string; email: string; phone: string | null; role: string }) => {
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) {
     throw new Error('JWT secret is not configured');
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, phone: user.phone, role: user.role },
     jwtSecret,
     { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'] },
   );
@@ -53,112 +53,61 @@ const issueJwtForUser = (user: { id: string; email: string; role: string }) => {
     user: {
       id: user.id,
       email: user.email,
+      phone: user.phone,
       role: user.role,
     },
   };
 };
 
-export const login = async (req: Request, res: Response) => {
+/**
+ * POST /auth/firebase-phone-login
+ * Body: { idToken: string }
+ *
+ * 1. Verify the Firebase ID token from the client (Phone Auth)
+ * 2. Extract the phone number
+ * 3. Look up the user by phone in the DB
+ * 4. Issue a backend JWT
+ */
+export const firebasePhoneLogin = async (req: Request, res: Response) => {
   try {
-    const rawEmail = req.body?.email as string | undefined;
+    const idToken = req.body?.idToken as string | undefined;
 
-    if (!rawEmail) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (!idToken) {
+      return res.status(400).json({ error: 'Firebase ID token is required' });
     }
 
-    const email = normalizeEmail(rawEmail);
+    // Verify the token using Firebase Admin SDK
+    const auth = getFirebaseAdminAuth();
+    let decodedToken;
 
-    if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+    try {
+      decodedToken = await auth.verifyIdToken(idToken);
+    } catch (verifyError) {
+      console.error('Firebase token verification failed:', verifyError);
+      return res.status(401).json({ error: 'Invalid or expired Firebase token' });
     }
 
-    const user = await findAuthorizedUser(email);
+    const phoneNumber = decodedToken.phone_number;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Token does not contain a phone number' });
+    }
+
+    const normalizedPhone = normalizePhone(phoneNumber);
+
+    // Look up user by phone number
+    const user = await findUserByPhone(normalizedPhone);
+
     if (!user) {
-      return res.status(403).json({ error: 'Unauthorized email. Please contact the superadmin for access.' });
-    }
-
-    const existingOtp = await prisma.otpCode.findUnique({ where: { email } });
-    if (existingOtp && !canRequestOtp(existingOtp.created_at)) {
-      return res.status(429).json({
-        error: `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      return res.status(403).json({
+        error: 'Unauthorized phone number. Please contact the superadmin for access.',
       });
     }
 
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    await prisma.otpCode.upsert({
-      where: { email },
-      update: {
-        otp_hash: hashOtp(email, otp),
-        expires_at: expiresAt,
-      },
-      create: {
-        email,
-        otp_hash: hashOtp(email, otp),
-        expires_at: expiresAt,
-      },
-    });
-
-    console.log(`[LOCAL DEV] OTP for ${email} is ${otp}`);
-
-    await sendMail({
-      to: email,
-      subject: 'Login OTP - EC Penalty System',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 24px; color: #18181b;">
-          <h2 style="margin-bottom: 12px;">Election Commission Penalty System</h2>
-          <p>Your secure login OTP is:</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.24em; margin: 18px 0;">${otp}</p>
-          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-        </div>
-      `,
-      text: `Your OTP for the EC Penalty System is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-    });
-
-    return res.json({ message: 'OTP sent successfully. Please check your email.' });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Failed to send OTP' });
-  }
-};
-
-export const verifyOtp = async (req: Request, res: Response) => {
-  try {
-    const rawEmail = req.body?.email as string | undefined;
-    const otp = req.body?.otp as string | undefined;
-
-    if (!rawEmail || !otp) {
-      return res.status(400).json({ error: 'Email and OTP are required' });
-    }
-
-    const email = normalizeEmail(rawEmail);
-    const otpRecord = await prisma.otpCode.findUnique({ where: { email } });
-
-    if (!otpRecord) {
-      return res.status(400).json({ error: 'Invalid or expired OTP' });
-    }
-
-    if (Date.now() > otpRecord.expires_at.getTime()) {
-      await prisma.otpCode.delete({ where: { email } });
-      return res.status(400).json({ error: 'OTP has expired' });
-    }
-
-    const incomingHash = hashOtp(email, otp);
-    if (!safeCompare(otpRecord.otp_hash, incomingHash)) {
-      return res.status(400).json({ error: 'Incorrect OTP' });
-    }
-
-    await prisma.otpCode.delete({ where: { email } });
-
-    const user = await findAuthorizedUser(email);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
+    // Mark user as verified if not already
     if (!user.is_verified) {
       await prisma.user.update({
-        where: { email },
+        where: { phone: normalizedPhone },
         data: { is_verified: true },
       });
     }
@@ -167,38 +116,62 @@ export const verifyOtp = async (req: Request, res: Response) => {
       issueJwtForUser({
         id: user.id,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       }),
     );
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Failed to verify OTP' });
+    console.error('Firebase Phone Login error:', error);
+    return res.status(500).json({ error: 'Login failed' });
   }
 };
 
+/**
+ * POST /auth/register
+ * Body: { phone: string, email?: string, role?: string }
+ * Requires: SUPERADMIN
+ *
+ * Register a new admin by phone number.
+ */
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
+    const rawPhone = req.body?.phone as string | undefined;
     const rawEmail = req.body?.email as string | undefined;
     const role = (req.body?.role as string | undefined) || 'ADMIN';
 
-    if (!rawEmail) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (!rawPhone) {
+      return res.status(400).json({ error: 'Phone number is required' });
     }
 
-    const email = normalizeEmail(rawEmail);
-
-    if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+    if (!isValidIndianPhoneInput(rawPhone)) {
+      return res.status(400).json({
+        error: 'Enter a valid Indian mobile number in 10-digit, 91XXXXXXXXXX, or +91XXXXXXXXXX format.',
+      });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+    if (!isSupportedRole(role)) {
+      return res.status(400).json({ error: 'Role must be ADMIN or SUPERADMIN' });
+    }
+
+    const phone = normalizePhone(rawPhone);
+    const email = rawEmail ? rawEmail.trim().toLowerCase() : `${phone.replace('+', '')}@phone.local`;
+
+    // Check if phone already exists
+    const existingByPhone = await prisma.user.findUnique({ where: { phone } });
+    if (existingByPhone) {
+      return res.status(400).json({ error: 'User with this phone number already exists' });
+    }
+
+    // Check if email already exists
+    const existingByEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingByEmail) {
+      return res.status(400).json({ error: 'User with this email already exists' });
     }
 
     const user = await prisma.user.create({
       data: {
         email,
+        phone,
         role,
         is_verified: true,
       },
@@ -211,6 +184,10 @@ export const registerAdmin = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * GET /auth/users
+ * Requires: SUPERADMIN
+ */
 export const getUsers = async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({

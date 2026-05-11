@@ -16,6 +16,7 @@ import {
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getAuthUserLabel, isPhoneLocalEmail } from '@/lib/phone';
 
 const primaryLinks = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -32,6 +33,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const userLabel = user ? getAuthUserLabel(user) : 'No user loaded';
+  const showEmail = !!user?.email && !isPhoneLocalEmail(user.email);
 
   const links = user?.role === 'SUPERADMIN'
     ? [...primaryLinks, { href: '/admin', label: 'Admin', icon: Settings2 }]
@@ -85,8 +88,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className="panel-soft mt-6 space-y-3 p-4">
           <div>
-            <p className="text-sm font-semibold">{user?.email ?? 'No user loaded'}</p>
+            <p className="text-sm font-semibold">{userLabel}</p>
             <p className="mt-1 text-sm muted">{user?.role ?? 'Signed out'}</p>
+            {showEmail && <p className="mt-1 text-xs muted">{user.email}</p>}
           </div>
           <div className="rounded-2xl border border-[var(--line)] bg-white/55 px-3 py-2 text-xs muted dark:bg-white/5">
             Use the directory for student context, then jump to sheets for operational work.

@@ -8,7 +8,7 @@ import roleRoutes from './src/routes/role.routes';
 import sheetRoutes from './src/routes/sheet.routes';
 import studentRoutes from './src/routes/student.routes';
 import { getGoogleIntegrationStatus } from './src/services/googleSheets';
-import { getMailerConfigStatus } from './src/services/mailer';
+import { getFirebaseAdminStatus } from './src/lib/firebaseAdmin';
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -49,7 +49,7 @@ app.use('/api/sheets', sheetRoutes);
 
 app.get('/api/health', async (_req, res) => {
   const google = await getGoogleIntegrationStatus();
-  const mailer = getMailerConfigStatus();
+  const firebase = getFirebaseAdminStatus();
 
   res.json({
     status: 'OK',
@@ -57,14 +57,10 @@ app.get('/api/health', async (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
     corsOrigins: allowedOrigins,
     services: {
-      mailer: {
-        provider: mailer.provider,
-        ready: mailer.ready,
-        missing: mailer.missing,
-      },
       auth: {
-        method: 'email-otp',
-        smtpProvider: 'gmail',
+        method: 'firebase-phone-otp',
+        firebaseReady: firebase.ready,
+        firebaseSource: firebase.source,
       },
       googleSheets: {
         ready: google.ready,

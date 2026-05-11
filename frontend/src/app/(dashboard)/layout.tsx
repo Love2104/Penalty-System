@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, ShieldAlert } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { getAuthUserLabel, isPhoneLocalEmail } from '@/lib/phone';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const pageCopy: Record<string, { title: string; subtitle: string }> = {
@@ -34,6 +35,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const { user, token, hasHydrated } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const userLabel = user ? getAuthUserLabel(user) : '';
+  const showEmail = !!user?.email && !isPhoneLocalEmail(user.email);
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -91,8 +94,13 @@ export default function DashboardLayout({
                     {user.role}
                   </span>
                   <div className="rounded-full border border-[var(--line)] bg-white/70 px-4 py-2 text-sm muted dark:bg-white/5">
-                    {user.email}
+                    {userLabel}
                   </div>
+                  {showEmail && (
+                    <div className="rounded-full border border-[var(--line)] bg-white/70 px-4 py-2 text-sm muted dark:bg-white/5">
+                      {user.email}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

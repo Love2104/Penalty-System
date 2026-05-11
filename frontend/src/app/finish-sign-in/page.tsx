@@ -4,8 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
- * Firebase Email Link sign-in is no longer used.
- * This page simply redirects to the home (OTP login) page.
+ * Legacy email link sign-in page — no longer used.
+ * Authentication now uses Firebase Phone OTP.
+ * This page simply redirects to the home (Phone OTP login) page.
  */
 export default function FinishSignInPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function FinishSignInPage() {
       <section className="panel w-full max-w-xl p-6 sm:p-8 text-center">
         <h1 className="font-display text-2xl font-bold">Redirecting…</h1>
         <p className="mt-3 text-sm muted">
-          Firebase Email Link sign-in has been replaced by Email OTP. Redirecting to the login page.
+          Authentication now uses Phone OTP. Redirecting to the login page.
         </p>
       </section>
     </main>
