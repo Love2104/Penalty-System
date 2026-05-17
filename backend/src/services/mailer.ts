@@ -5,6 +5,7 @@ interface SendMailPayload {
   subject: string;
   html: string;
   text?: string;
+  templateType?: string;
 }
 
 const getTransporter = () =>
