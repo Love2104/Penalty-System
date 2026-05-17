@@ -44,7 +44,6 @@ export default function LoginPage() {
     setMessage('');
   };
 
-  /* ───── Backend Email OTP flow ───── */
   const requestOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -52,7 +51,7 @@ export default function LoginPage() {
 
     try {
       const response = await api.post<{ message: string }>('/auth/login', { email });
-      setMessage(response.data.message || 'OTP sent! Check your email.');
+      setMessage(response.data.message || 'OTP sent. Check your inbox.');
       setOtpStage('otp');
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Failed to send OTP. Please try again.'));
@@ -88,19 +87,12 @@ export default function LoginPage() {
     clearFeedback();
   };
 
-  /* ───── Descriptions ───── */
-  const headingText =
-    otpStage === 'email'
-      ? 'Sign in with OTP'
-      : 'Verify your OTP';
+  const headingText = otpStage === 'email' ? 'Sign in with email OTP' : 'Verify your email OTP';
 
   const subText =
     otpStage === 'email'
-      ? 'Enter your authorized institute email to receive a 6-digit OTP.'
-      : `We sent a 6-digit OTP to ${email}. Enter it below to sign in.`;
-
-  const footerText =
-    'A 6-digit OTP is sent to your email via Brevo. After verification, the backend issues a secure JWT session token for your approved role.';
+      ? 'Enter your authorized IITK email address to receive a 6-digit one-time password.'
+      : `We sent a 6-digit OTP to ${email}. Enter it below to continue.`;
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
@@ -112,19 +104,19 @@ export default function LoginPage() {
         <section className="panel relative overflow-hidden p-8 sm:p-10 lg:p-12">
           <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-br from-amber-500/20 via-transparent to-sky-500/10" />
           <div className="relative">
-            <p className="eyebrow">Production Control Room</p>
+            <p className="eyebrow">Election Commission Workspace</p>
             <h1 className="mt-4 max-w-2xl font-display text-4xl font-bold leading-tight sm:text-5xl">
-              Election penalty operations, cleaned up for real-world deployment.
+              Manage penalty review, spreadsheet coordination, and secure member access from one operational workspace.
             </h1>
             <p className="mt-5 max-w-2xl text-base muted sm:text-lg">
-              Review student intelligence, manage Google Sheet workflows, and dispatch penalty communication from one production-ready workspace.
+              This interface is built for approved EC members to review cases, sync sheet data, and move records from draft to dispatch with clearer status control.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {[
-                ['Secure access', 'Email OTP verification via Brevo for approved EC accounts only.'],
-                ['Review workflow', 'From draft to dispatch with clearer status control.'],
-                ['Deployment-ready', 'Prepared for Firebase frontend hosting and Render backend rollout.'],
+                ['Secure access', 'Email OTP sign-in for approved IITK Election Commission accounts only.'],
+                ['Sheet coordination', 'Link Google Sheets, discover tabs, and keep review activity organized.'],
+                ['Dispatch workflow', 'Track draft, review, approval, and final communication from one place.'],
               ].map(([title, copy]) => (
                 <div key={title} className="panel-soft p-5">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
@@ -139,14 +131,12 @@ export default function LoginPage() {
         </section>
 
         <section className="panel p-6 sm:p-8">
-          {/* ─── Header ─── */}
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white dark:bg-white dark:text-slate-950">
             <p className="eyebrow text-amber-300 dark:text-amber-700">Member Access</p>
             <h2 className="mt-3 font-display text-3xl font-bold">{headingText}</h2>
             <p className="mt-2 text-sm text-slate-300 dark:text-slate-600">{subText}</p>
           </div>
 
-          {/* ─── Feedback ─── */}
           <AnimatePresence mode="wait">
             {(error || message) && (
               <motion.div
@@ -164,10 +154,8 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          {/* ─── Forms ─── */}
           <AnimatePresence mode="wait">
             {otpStage === 'email' ? (
-              /* OTP - Step 1: Enter email */
               <motion.form
                 key="otp-email-form"
                 animate={{ opacity: 1, x: 0 }}
@@ -197,7 +185,6 @@ export default function LoginPage() {
                 </button>
               </motion.form>
             ) : (
-              /* OTP - Step 2: Enter OTP code */
               <motion.form
                 key="otp-verify-form"
                 animate={{ opacity: 1, x: 0 }}
@@ -231,7 +218,7 @@ export default function LoginPage() {
                   type="submit"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                  Verify &amp; Sign in
+                  Verify and sign in
                 </button>
 
                 <button
@@ -247,9 +234,8 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          {/* ─── Footer info ─── */}
           <div className="mt-6 rounded-3xl border border-[var(--line)] bg-white/55 px-4 py-4 text-sm muted dark:bg-white/5">
-            {footerText}
+            Access is restricted to approved EC roles. If your account needs to be added or corrected, contact the superadmin at lovec23@iitk.ac.in.
           </div>
         </section>
       </div>

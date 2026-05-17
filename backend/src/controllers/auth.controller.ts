@@ -30,8 +30,7 @@ const canRequestOtp = (createdAt: Date) => {
   return Date.now() >= cooldownEnds;
 };
 
-const isAllowedEmail = (email: string) =>
-  email.endsWith('@iitk.ac.in') || email.endsWith('@gmail.com');
+const isAllowedEmail = (email: string) => email.endsWith('@iitk.ac.in');
 
 const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
 
@@ -69,12 +68,12 @@ export const login = async (req: Request, res: Response) => {
     const email = normalizeEmail(rawEmail);
 
     if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+      return res.status(403).json({ error: 'Only approved @iitk.ac.in email addresses are allowed' });
     }
 
     const user = await findAuthorizedUser(email);
     if (!user) {
-      return res.status(403).json({ error: 'Unauthorized email. Please contact the superadmin for access.' });
+      return res.status(403).json({ error: 'Unauthorized email. Please contact lovec23@iitk.ac.in for access.' });
     }
 
     const existingOtp = await prisma.otpCode.findUnique({ where: { email } });
@@ -188,7 +187,7 @@ export const registerAdmin = async (req: Request, res: Response) => {
     const email = normalizeEmail(rawEmail);
 
     if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Only @iitk.ac.in or @gmail.com emails allowed' });
+      return res.status(403).json({ error: 'Only approved @iitk.ac.in email addresses are allowed' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });

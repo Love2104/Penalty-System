@@ -20,9 +20,9 @@ model User {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  sheets_created        Sheet[]        @relation("CreatedSheets")
-  sheets_reviewed       Sheet[]        @relation("ReviewedSheets")
-  spreadsheets_created  Spreadsheet[]  @relation("CreatedSpreadsheets")
+  sheets_created        Sheet[]       @relation("CreatedSheets")
+  sheets_reviewed       Sheet[]       @relation("ReviewedSheets")
+  spreadsheets_created  Spreadsheet[] @relation("CreatedSpreadsheets")
   review_logs           ReviewLog[]
 }
 
@@ -38,7 +38,7 @@ model Student {
   gender      String?
   hometown    String?
   image_url   String?
-  email       String? // Assuming derived or filled later
+  email       String?
 
   @@map("students")
 }
@@ -62,7 +62,7 @@ model Spreadsheet {
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
-  creator User    @relation("CreatedSpreadsheets", fields: [created_by], references: [id])
+  creator User   @relation("CreatedSpreadsheets", fields: [created_by], references: [id])
   tabs    Sheet[]
 
   @@map("spreadsheets")
@@ -92,21 +92,20 @@ model Sheet {
 model PenaltyRow {
   id         String   @id @default(uuid())
   sheet_id   String
-  type       String   // GBM / Candidate / Office Bearer
+  type       String
   name       String
   roll_no    String
   email      String
   clause     String
-  nature     String   // Penalty Level (Level 0-6)
-  remarks    String   // Official EC remark
-  comment    String   // Internal EC note
+  nature     String
+  remarks    String
+  comment    String
   created_at DateTime @default(now())
 
-  sheet      Sheet     @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+  sheet Sheet @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
 
   @@index([roll_no])
   @@index([sheet_id, roll_no])
-
   @@map("penalty_rows")
 }
 
@@ -114,12 +113,12 @@ model ReviewLog {
   id          String   @id @default(uuid())
   sheet_id    String
   reviewer_id String
-  action      String   // e.g. "SUBMITTED", "APPROVED", "REJECTED"
+  action      String
   comment     String?
   timestamp   DateTime @default(now())
 
-  sheet       Sheet    @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
-  reviewer    User     @relation(fields: [reviewer_id], references: [id])
+  sheet    Sheet @relation(fields: [sheet_id], references: [id], onDelete: Cascade)
+  reviewer User  @relation(fields: [reviewer_id], references: [id])
 
   @@map("review_logs")
 }

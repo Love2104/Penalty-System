@@ -54,7 +54,6 @@ async function main() {
     console.log('Clause seed file not found. Skipping clause seeding.');
   }
 
-  // Seed students from JSON file
   const studentsFilePath = process.env.STUDENT_SEED_PATH?.trim();
 
   if (studentsFilePath && fs.existsSync(studentsFilePath)) {
@@ -79,18 +78,18 @@ async function main() {
         gender: s.gender || null,
         hometown: s.hometown || null,
         image_url: s.image_url || null,
-        email: s.username ? `${s.username}@iitk.ac.in` : null, // deriving email
+        email: s.username ? `${s.username}@iitk.ac.in` : null,
       }));
 
       try {
         await prisma.student.createMany({
           data: chunk,
+          skipDuplicates: true,
         });
         count += chunk.length;
         console.log(`Seeded ${count}/${students.length} students...`);
       } catch (err: any) {
         console.log('Error seeding chunk, falling back to individual inserts...', err.message);
-        // Fallback if there are duplicates in the JSON
         for (const s of chunk) {
           try {
             await prisma.student.upsert({
@@ -98,7 +97,7 @@ async function main() {
               update: {},
               create: s
             });
-          } catch (e) { }
+          } catch (_error) {}
         }
       }
     }

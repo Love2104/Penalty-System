@@ -16,6 +16,7 @@ roles.json
 backend/dist
 frontend/.next/
 frontend/out/
+.firebase/
 
 # Databases
 *.db
@@ -28,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+tmp/
 
 # OS Files
 .DS_Store
