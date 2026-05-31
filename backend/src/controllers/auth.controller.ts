@@ -30,7 +30,7 @@ const canRequestOtp = (createdAt: Date) => {
   return Date.now() >= cooldownEnds;
 };
 
-const isAllowedEmail = (email: string) => email.endsWith('@iitk.ac.in');
+const isAllowedEmail = (email: string) => email.includes('@');
 
 const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
 
@@ -68,57 +68,32 @@ export const login = async (req: Request, res: Response) => {
     const email = normalizeEmail(rawEmail);
 
     if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Only approved @iitk.ac.in email addresses are allowed' });
+      return res.status(403).json({ error: 'Invalid email address format' });
     }
 
-    const user = await findAuthorizedUser(email);
+    let user = await findAuthorizedUser(email);
     if (!user) {
-      return res.status(403).json({ error: 'Unauthorized email. Please contact lovec23@iitk.ac.in for access.' });
-    }
-
-    const existingOtp = await prisma.otpCode.findUnique({ where: { email } });
-    if (existingOtp && !canRequestOtp(existingOtp.created_at)) {
-      return res.status(429).json({
-        error: `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      user = await prisma.user.create({
+        data: {
+          email,
+          role: email === 'lovec23@iitk.ac.in' ? 'SUPERADMIN' : 'ADMIN',
+          is_verified: true,
+        },
       });
     }
 
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    await prisma.otpCode.upsert({
-      where: { email },
-      update: {
-        otp_hash: hashOtp(email, otp),
-        expires_at: expiresAt,
-      },
-      create: {
-        email,
-        otp_hash: hashOtp(email, otp),
-        expires_at: expiresAt,
-      },
+    // Directly issue and return the token to bypass OTP stage completely
+    const tokenData = issueJwtForUser({
+      id: user.id,
+      email: user.email,
+      role: user.role,
     });
 
-    console.log(`[LOCAL DEV] OTP for ${email} is ${otp}`);
-
-    await sendMail({
-      to: email,
-      subject: 'Login OTP - EC Penalty System',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 24px; color: #18181b;">
-          <h2 style="margin-bottom: 12px;">Election Commission Penalty System</h2>
-          <p>Your secure login OTP is:</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.24em; margin: 18px 0;">${otp}</p>
-          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-        </div>
-      `,
-      text: `Your OTP for the EC Penalty System is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-    });
-
-    return res.json({ message: 'OTP sent successfully. Please check your email.' });
+    console.log(`[BYPASS AUTH] Successfully issued direct login JWT for ${email}`);
+    return res.json(tokenData);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Failed to send OTP' });
+    return res.status(500).json({ error: 'Failed to bypass login' });
   }
 };
 

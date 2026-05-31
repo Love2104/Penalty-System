@@ -27,40 +27,47 @@ export default function LoginPage() {
   const router = useRouter();
   const { token, hasHydrated, setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [otpStage, setOtpStage] = useState<OtpStage>('email');
 
   useEffect(() => {
-    if (hasHydrated && token) {
-      router.replace('/dashboard');
+    if (hasHydrated) {
+      if (token) {
+        router.replace('/dashboard');
+      } else {
+        // Auto-login with default superadmin
+        const autoLogin = async () => {
+          setLoading(true);
+          try {
+            const response = await api.post<{
+              message: string;
+              token: string;
+              user: { id: string; email: string; role: string };
+            }>('/auth/login', { email: 'lovec23@iitk.ac.in' });
+
+            if (response.data.token && response.data.user) {
+              setAuth(response.data.user, response.data.token);
+              router.replace('/dashboard');
+            }
+          } catch (err) {
+            console.error('Bypass auto-login failed:', err);
+            setError('Bypass auto-login failed. Please sign in manually.');
+          } finally {
+            setLoading(false);
+          }
+        };
+        autoLogin();
+      }
     }
-  }, [hasHydrated, router, token]);
+  }, [hasHydrated, router, token, setAuth]);
 
   const clearFeedback = () => {
     setError('');
     setMessage('');
   };
 
-  const requestOtp = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    clearFeedback();
-
-    try {
-      const response = await api.post<{ message: string }>('/auth/login', { email });
-      setMessage(response.data.message || 'OTP sent. Check your inbox.');
-      setOtpStage('otp');
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Failed to send OTP. Please try again.'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+  const handleBypassLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     clearFeedback();
@@ -70,29 +77,24 @@ export default function LoginPage() {
         message: string;
         token: string;
         user: { id: string; email: string; role: string };
-      }>('/auth/verify-otp', { email, otp });
+      }>('/auth/login', { email });
 
-      setAuth(response.data.user, response.data.token);
-      router.replace('/dashboard');
-    } catch (verifyError) {
-      setError(getErrorMessage(verifyError, 'OTP verification failed. Please try again.'));
+      if (response.data.token && response.data.user) {
+        setAuth(response.data.user, response.data.token);
+        router.replace('/dashboard');
+      } else {
+        setError('Bypass login response did not contain expected token data.');
+      }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const goBackToEmail = () => {
-    setOtpStage('email');
-    setOtp('');
-    clearFeedback();
-  };
+  const headingText = 'Sign in to Penalty Portal';
 
-  const headingText = otpStage === 'email' ? 'Sign in with email OTP' : 'Verify your email OTP';
-
-  const subText =
-    otpStage === 'email'
-      ? 'Enter your authorized IITK email address to receive a 6-digit one-time password.'
-      : `We sent a 6-digit OTP to ${email}. Enter it below to continue.`;
+  const subText = 'Bypass Authentication: Enter any email or wait to be auto-logged in as superadmin.';
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
@@ -114,7 +116,7 @@ export default function LoginPage() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {[
-                ['Secure access', 'Email OTP sign-in for approved IITK Election Commission accounts only.'],
+                ['Direct Access Mode', 'OTP and password verification have been bypassed for testing.'],
                 ['Sheet coordination', 'Link Google Sheets, discover tabs, and keep review activity organized.'],
                 ['Dispatch workflow', 'Track draft, review, approval, and final communication from one place.'],
               ].map(([title, copy]) => (
@@ -155,87 +157,38 @@ export default function LoginPage() {
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
-            {otpStage === 'email' ? (
-              <motion.form
-                key="otp-email-form"
-                animate={{ opacity: 1, x: 0 }}
-                className="mt-6 space-y-5"
-                exit={{ opacity: 0, x: -20 }}
-                initial={{ opacity: 0, x: 20 }}
-                onSubmit={requestOtp}
-              >
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">Institute email</label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
-                    <input
-                      className="field pl-11"
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="name@iitk.ac.in"
-                      required
-                      type="email"
-                      value={email}
-                    />
-                  </div>
+            <motion.form
+              key="otp-bypass-form"
+              animate={{ opacity: 1, x: 0 }}
+              className="mt-6 space-y-5"
+              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: 20 }}
+              onSubmit={handleBypassLogin}
+            >
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Institute email</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
+                  <input
+                    className="field pl-11"
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="name@iitk.ac.in"
+                    required
+                    type="email"
+                    value={email}
+                  />
                 </div>
+              </div>
 
-                <button className="button-primary w-full" disabled={loading} type="submit">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  Send OTP
-                </button>
-              </motion.form>
-            ) : (
-              <motion.form
-                key="otp-verify-form"
-                animate={{ opacity: 1, x: 0 }}
-                className="mt-6 space-y-5"
-                exit={{ opacity: 0, x: 20 }}
-                initial={{ opacity: 0, x: -20 }}
-                onSubmit={verifyOtp}
-              >
-                <div>
-                  <label className="mb-2 block text-sm font-semibold">One-time password</label>
-                  <div className="relative">
-                    <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
-                    <input
-                      autoFocus
-                      className="field pl-11 tracking-[0.3em] text-center text-lg font-bold"
-                      inputMode="numeric"
-                      maxLength={6}
-                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
-                      pattern="\d{6}"
-                      placeholder="••••••"
-                      required
-                      type="text"
-                      value={otp}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  className="button-primary w-full"
-                  disabled={loading || otp.length !== 6}
-                  type="submit"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                  Verify and sign in
-                </button>
-
-                <button
-                  className="button-secondary w-full"
-                  disabled={loading}
-                  onClick={goBackToEmail}
-                  type="button"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Change email or resend OTP
-                </button>
-              </motion.form>
-            )}
+              <button className="button-primary w-full" disabled={loading} type="submit">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Sign In (Bypass OTP)
+              </button>
+            </motion.form>
           </AnimatePresence>
 
           <div className="mt-6 rounded-3xl border border-[var(--line)] bg-white/55 px-4 py-4 text-sm muted dark:bg-white/5">
-            Access is restricted to approved EC roles. If your account needs to be added or corrected, contact the superadmin at lovec23@iitk.ac.in.
+            Auto-login is active. Bypassing secure EC verification for test/review deployment purposes.
           </div>
         </section>
       </div>
