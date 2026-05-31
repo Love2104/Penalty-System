@@ -19,18 +19,15 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: { id: 'bypass-id', email: 'lovec23@iitk.ac.in', role: 'SUPERADMIN' },
-      token: 'bypass-token-value',
+      user: null,
+      token: null,
       hasHydrated: false,
       setAuth: (user, token) => set({ user, token }),
-      logout: () => set({
-        user: { id: 'bypass-id', email: 'lovec23@iitk.ac.in', role: 'SUPERADMIN' },
-        token: 'bypass-token-value'
-      }),
+      logout: () => set({ user: null, token: null }),
       markHydrated: () => set({ hasHydrated: true }),
     }),
     {
-      name: 'penalty-system-auth-bypass',
+      name: 'penalty-system-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,

@@ -8,8 +8,6 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-type OtpStage = 'email' | 'otp';
-
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'object' && error && 'response' in error) {
     const response = (error as { response?: { data?: { error?: string } } }).response;
@@ -27,88 +25,39 @@ export default function LoginPage() {
   const router = useRouter();
   const { token, hasHydrated, setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (hasHydrated) {
-      if (token) {
-        router.replace('/dashboard');
-      } else {
-        // Auto-login with default superadmin
-        const autoLogin = async () => {
-          setLoading(true);
-          try {
-            const response = await api.post<{
-              message: string;
-              token: string;
-              user: { id: string; email: string; role: string };
-            }>('/auth/login', { email: 'lovec23@iitk.ac.in' });
-
-            if (response.data.token && response.data.user) {
-              setAuth(response.data.user, response.data.token);
-              router.replace('/dashboard');
-            }
-          } catch (err) {
-            console.error('Bypass auto-login failed:', err);
-            setError('Bypass auto-login failed. Please sign in manually.');
-          } finally {
-            setLoading(false);
-          }
-        };
-        autoLogin();
-      }
+    if (hasHydrated && token) {
+      router.replace('/dashboard');
     }
-  }, [hasHydrated, router, token, setAuth]);
+  }, [hasHydrated, router, token]);
 
-  const clearFeedback = () => {
-    setError('');
-    setMessage('');
-  };
-
-  const handleBypassLogin = async (event: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
-    clearFeedback();
+    setError('');
 
     try {
       const response = await api.post<{
         message: string;
         token: string;
         user: { id: string; email: string; role: string };
-      }>('/auth/login', { email });
+      }>('/auth/login', { email, password });
 
-      if (response.data.token && response.data.user) {
-        setAuth(response.data.user, response.data.token);
-        router.replace('/dashboard');
-      } else {
-        setError('Bypass login response did not contain expected token data.');
-      }
-    } catch (requestError) {
-      setError(getErrorMessage(requestError, 'Login failed. Please try again.'));
+      setAuth(response.data.user, response.data.token);
+      router.replace('/dashboard');
+    } catch (loginError) {
+      setError(getErrorMessage(loginError, 'Incorrect email or password. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
   const headingText = 'Sign in to Penalty Portal';
-
-  const subText = 'Bypass Authentication: Enter any email or wait to be auto-logged in as superadmin.';
-
-  if (!hasHydrated || token) {
-    return (
-      <main className="relative flex min-h-screen items-center justify-center p-4">
-        <div className="panel flex max-w-sm flex-col items-center gap-4 px-8 py-10 text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-[color:var(--accent)]" />
-          <div>
-            <p className="page-title text-2xl font-bold">Bypassing Authentication</p>
-            <p className="mt-2 text-sm muted">Redirecting you directly to the Penalty Portal...</p>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const subText = 'Enter your authorized IITK email address and password to access the operational workspace.';
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
@@ -130,7 +79,7 @@ export default function LoginPage() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {[
-                ['Direct Access Mode', 'OTP and password verification have been bypassed for testing.'],
+                ['Secure access', 'Email and password authentication for approved IITK Election Commission members.'],
                 ['Sheet coordination', 'Link Google Sheets, discover tabs, and keep review activity organized.'],
                 ['Dispatch workflow', 'Track draft, review, approval, and final communication from one place.'],
               ].map(([title, copy]) => (
@@ -154,55 +103,57 @@ export default function LoginPage() {
           </div>
 
           <AnimatePresence mode="wait">
-            {(error || message) && (
+            {error && (
               <motion.div
                 animate={{ opacity: 1, y: 0 }}
-                className={`mt-5 rounded-3xl border px-4 py-3 text-sm ${
-                  error
-                    ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-300'
-                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                }`}
+                className="mt-5 rounded-3xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300"
                 exit={{ opacity: 0, y: -10 }}
                 initial={{ opacity: 0, y: -10 }}
               >
-                {error || message}
+                {error}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <AnimatePresence mode="wait">
-            <motion.form
-              key="otp-bypass-form"
-              animate={{ opacity: 1, x: 0 }}
-              className="mt-6 space-y-5"
-              exit={{ opacity: 0, x: -20 }}
-              initial={{ opacity: 0, x: 20 }}
-              onSubmit={handleBypassLogin}
-            >
-              <div>
-                <label className="mb-2 block text-sm font-semibold">Institute email</label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
-                  <input
-                    className="field pl-11"
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="name@iitk.ac.in"
-                    required
-                    type="email"
-                    value={email}
-                  />
-                </div>
+          <form className="mt-6 space-y-5" onSubmit={handleLogin}>
+            <div>
+              <label className="mb-2 block text-sm font-semibold">Institute email</label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
+                <input
+                  className="field pl-11"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="name@iitk.ac.in"
+                  required
+                  type="email"
+                  value={email}
+                />
               </div>
+            </div>
 
-              <button className="button-primary w-full" disabled={loading} type="submit">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Sign In (Bypass OTP)
-              </button>
-            </motion.form>
-          </AnimatePresence>
+            <div>
+              <label className="mb-2 block text-sm font-semibold">Password</label>
+              <div className="relative">
+                <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--foreground-soft)]" />
+                <input
+                  className="field pl-11"
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  required
+                  type="password"
+                  value={password}
+                />
+              </div>
+            </div>
+
+            <button className="button-primary w-full" disabled={loading} type="submit">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Sign In
+            </button>
+          </form>
 
           <div className="mt-6 rounded-3xl border border-[var(--line)] bg-white/55 px-4 py-4 text-sm muted dark:bg-white/5">
-            Auto-login is active. Bypassing secure EC verification for test/review deployment purposes.
+            Access is restricted to approved EC roles. The default password is <strong>Love@2004</strong>. If your account needs to be added, contact the superadmin at lovec23@iitk.ac.in.
           </div>
         </section>
       </div>

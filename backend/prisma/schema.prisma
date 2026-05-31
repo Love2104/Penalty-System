@@ -13,12 +13,13 @@ datasource db {
 // SheetStatus: "DRAFT" | "UNDER_REVIEW" | "FINAL_APPROVED" | "SENT"
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  role        String   @default("ADMIN")
-  is_verified Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  email         String   @unique
+  role          String   @default("ADMIN")
+  is_verified   Boolean  @default(false)
+  password_hash String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   sheets_created        Sheet[]       @relation("CreatedSheets")
   sheets_reviewed       Sheet[]       @relation("ReviewedSheets")

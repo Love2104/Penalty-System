@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { sendMail } from '../services/mailer';
+import { hashPassword, verifyPassword } from '../lib/hash';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_RESEND_COOLDOWN_SECONDS = 45;
@@ -30,7 +31,7 @@ const canRequestOtp = (createdAt: Date) => {
   return Date.now() >= cooldownEnds;
 };
 
-const isAllowedEmail = (email: string) => email.includes('@');
+const isAllowedEmail = (email: string) => email.endsWith('@iitk.ac.in');
 
 const findAuthorizedUser = async (email: string) => prisma.user.findUnique({ where: { email } });
 
@@ -60,74 +61,32 @@ const issueJwtForUser = (user: { id: string; email: string; role: string }) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const rawEmail = req.body?.email as string | undefined;
+    const password = req.body?.password as string | undefined;
 
-    if (!rawEmail) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (!rawEmail || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
     const email = normalizeEmail(rawEmail);
 
     if (!isAllowedEmail(email)) {
-      return res.status(403).json({ error: 'Invalid email address format' });
+      return res.status(403).json({ error: 'Only approved @iitk.ac.in email addresses are allowed' });
     }
-
-    let user = await findAuthorizedUser(email);
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          role: email === 'lovec23@iitk.ac.in' ? 'SUPERADMIN' : 'ADMIN',
-          is_verified: true,
-        },
-      });
-    }
-
-    // Directly issue and return the token to bypass OTP stage completely
-    const tokenData = issueJwtForUser({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    console.log(`[BYPASS AUTH] Successfully issued direct login JWT for ${email}`);
-    return res.json(tokenData);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Failed to bypass login' });
-  }
-};
-
-export const verifyOtp = async (req: Request, res: Response) => {
-  try {
-    const rawEmail = req.body?.email as string | undefined;
-    const otp = req.body?.otp as string | undefined;
-
-    if (!rawEmail || !otp) {
-      return res.status(400).json({ error: 'Email and OTP are required' });
-    }
-
-    const email = normalizeEmail(rawEmail);
-    const otpRecord = await prisma.otpCode.findUnique({ where: { email } });
-
-    if (!otpRecord) {
-      return res.status(400).json({ error: 'Invalid or expired OTP' });
-    }
-
-    if (Date.now() > otpRecord.expires_at.getTime()) {
-      await prisma.otpCode.delete({ where: { email } });
-      return res.status(400).json({ error: 'OTP has expired' });
-    }
-
-    const incomingHash = hashOtp(email, otp);
-    if (!safeCompare(otpRecord.otp_hash, incomingHash)) {
-      return res.status(400).json({ error: 'Incorrect OTP' });
-    }
-
-    await prisma.otpCode.delete({ where: { email } });
 
     const user = await findAuthorizedUser(email);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(403).json({ error: 'Unauthorized email. Please contact lovec23@iitk.ac.in for access.' });
+    }
+
+    let isCorrect = false;
+    if (user.password_hash) {
+      isCorrect = verifyPassword(password, user.password_hash);
+    } else {
+      isCorrect = password === 'Love@2004';
+    }
+
+    if (!isCorrect) {
+      return res.status(401).json({ error: 'Incorrect password' });
     }
 
     if (!user.is_verified) {
@@ -135,24 +94,26 @@ export const verifyOtp = async (req: Request, res: Response) => {
         where: { email },
         data: { is_verified: true },
       });
+      user.is_verified = true;
     }
 
-    return res.json(
-      issueJwtForUser({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      }),
-    );
+    const tokenData = issueJwtForUser({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return res.json(tokenData);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Failed to verify OTP' });
+    return res.status(500).json({ error: 'Failed to authenticate user' });
   }
 };
 
 export const registerAdmin = async (req: Request, res: Response) => {
   try {
     const rawEmail = req.body?.email as string | undefined;
+    const rawPassword = req.body?.password as string | undefined;
     const role = (req.body?.role as string | undefined) || 'ADMIN';
 
     if (!rawEmail) {
@@ -170,11 +131,14 @@ export const registerAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User already exists' });
     }
 
+    const passwordHash = rawPassword ? hashPassword(rawPassword) : hashPassword('Love@2004');
+
     const user = await prisma.user.create({
       data: {
         email,
         role,
         is_verified: true,
+        password_hash: passwordHash,
       },
     });
 

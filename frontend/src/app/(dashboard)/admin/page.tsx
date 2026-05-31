@@ -37,6 +37,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 export default function AdminPage() {
   const { user } = useAuthStore();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState('ADMIN');
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -104,9 +105,10 @@ export default function AdminPage() {
     setMessage(null);
 
     try {
-      await api.post('/auth/register', { email, role });
+      await api.post('/auth/register', { email, role, password });
       setMessage({ type: 'success', text: 'Admin registered successfully.' });
       setEmail('');
+      setPassword('');
       await refreshUsers();
     } catch (error) {
       setMessage({ type: 'error', text: getErrorMessage(error, 'Unable to register this user.') });
@@ -194,6 +196,17 @@ export default function AdminPage() {
                 required
                 type="email"
                 value={email}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold">Password (optional)</label>
+              <input
+                className="field"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Defaults to Love@2004"
+                type="password"
+                value={password}
               />
             </div>
 

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { hashPassword } from '../src/lib/hash';
 
 const prisma = new PrismaClient();
 
@@ -26,17 +27,20 @@ async function main() {
     );
   }
 
+  const defaultPasswordHash = hashPassword('Love@2004');
   for (const superAdminEmail of superAdminEmails) {
     await prisma.user.upsert({
       where: { email: superAdminEmail },
       update: {
         role: 'SUPERADMIN',
         is_verified: true,
+        password_hash: defaultPasswordHash,
       },
       create: {
         email: superAdminEmail,
         role: 'SUPERADMIN',
         is_verified: true,
+        password_hash: defaultPasswordHash,
       },
     });
   }
