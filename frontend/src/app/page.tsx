@@ -96,6 +96,20 @@ export default function LoginPage() {
 
   const subText = 'Bypass Authentication: Enter any email or wait to be auto-logged in as superadmin.';
 
+  if (!hasHydrated || token) {
+    return (
+      <main className="relative flex min-h-screen items-center justify-center p-4">
+        <div className="panel flex max-w-sm flex-col items-center gap-4 px-8 py-10 text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[color:var(--accent)]" />
+          <div>
+            <p className="page-title text-2xl font-bold">Bypassing Authentication</p>
+            <p className="mt-2 text-sm muted">Redirecting you directly to the Penalty Portal...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
