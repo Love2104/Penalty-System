@@ -204,7 +204,7 @@ export default function AdminPage() {
               <input
                 className="field"
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Defaults to GE27@Scraped,,"
+                placeholder="Password"
                 type="password"
                 value={password}
               />
