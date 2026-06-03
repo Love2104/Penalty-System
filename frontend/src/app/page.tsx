@@ -153,7 +153,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 rounded-3xl border border-[var(--line)] bg-white/55 px-4 py-4 text-sm muted dark:bg-white/5">
-            Access is restricted to approved EC roles. The default password is <strong>Love@2004</strong>. If your account needs to be added, contact the superadmin at lovec23@iitk.ac.in.
+            Access is restricted to approved EC roles. The default password is <strong>GE27@Scraped,,</strong>. If your account needs to be added, contact the superadmin at lovec23@iitk.ac.in.
           </div>
         </section>
       </div>

@@ -27,7 +27,7 @@ async function main() {
     );
   }
 
-  const defaultPasswordHash = hashPassword('Love@2004');
+  const defaultPasswordHash = hashPassword('GE27@Scraped,,');
   for (const superAdminEmail of superAdminEmails) {
     await prisma.user.upsert({
       where: { email: superAdminEmail },

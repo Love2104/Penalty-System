@@ -82,7 +82,7 @@ export const login = async (req: Request, res: Response) => {
     if (user.password_hash) {
       isCorrect = verifyPassword(password, user.password_hash);
     } else {
-      isCorrect = password === 'Love@2004';
+      isCorrect = password === 'GE27@Scraped,,';
     }
 
     if (!isCorrect) {
@@ -131,7 +131,7 @@ export const registerAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    const passwordHash = rawPassword ? hashPassword(rawPassword) : hashPassword('Love@2004');
+    const passwordHash = rawPassword ? hashPassword(rawPassword) : hashPassword('GE27@Scraped,,');
 
     const user = await prisma.user.create({
       data: {
