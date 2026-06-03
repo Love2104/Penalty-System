@@ -7,7 +7,7 @@ runConfig:
 
 env:
   - variable: NEXT_PUBLIC_API_URL
-    value: https://your-render-backend.onrender.com/api
+    value: https://penalty-system-api.onrender.com/api
     availability:
       - BUILD
       - RUNTIME
